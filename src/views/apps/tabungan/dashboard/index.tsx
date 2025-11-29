@@ -417,17 +417,17 @@ const TabunganDashboard = () => {
       <Tooltip title="Tambah Transaksi" placement="left">
         <Fab
           color="primary"
-          size="medium"
+          size="small"
           aria-label="tambah transaksi"
           onClick={() => setOpenAddDialog(true)}
           sx={{
             position: 'fixed',
-            bottom: { xs: 80, sm: 90 },
-            right: { xs: 16, sm: 24 },
+            bottom: { xs: 16, sm: 24 },
+            right: { xs: 70, sm: 80 },
             zIndex: 1000,
             boxShadow: 3,
-            width: 48,
-            height: 48,
+            width: 40,
+            height: 40,
             '&:hover': {
               transform: 'scale(1.1)',
               boxShadow: 6
@@ -435,7 +435,7 @@ const TabunganDashboard = () => {
             transition: 'all 0.2s ease-in-out'
           }}
         >
-          <i className='tabler-plus text-lg' />
+          <i className='tabler-plus text-base' />
         </Fab>
       </Tooltip>
 
