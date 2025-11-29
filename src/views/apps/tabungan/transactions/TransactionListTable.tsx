@@ -424,9 +424,9 @@ const TransactionListTable = () => {
       <Card>
         <CardHeader title='Daftar Transaksi' />
         <Divider />
-        <div className='flex flex-col gap-4 p-4 sm:p-6'>
-          {/* Filters Row */}
-          <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 w-full'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 sm:p-6'>
+          {/* Filters */}
+          <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto'>
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
@@ -466,18 +466,16 @@ const TransactionListTable = () => {
               </CustomTextField>
             )}
           </div>
-          {/* Button Row */}
-          <div className='flex justify-end'>
-            <Button
-              variant='contained'
-              startIcon={<i className='tabler-plus' />}
-              onClick={() => handleOpenDialog()}
-              size='small'
-              className='w-full sm:w-auto'
-            >
-              Tambah Transaksi
-            </Button>
-          </div>
+          {/* Button */}
+          <Button
+            variant='contained'
+            startIcon={<i className='tabler-plus' />}
+            onClick={() => handleOpenDialog()}
+            size='small'
+            className='w-full sm:w-auto shrink-0'
+          >
+            Tambah Transaksi
+          </Button>
         </div>
         <div className='overflow-x-auto'>
           <table className={tableStyles.table} style={{ minWidth: 800 }}>
