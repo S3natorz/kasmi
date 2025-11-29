@@ -71,9 +71,32 @@ const TabunganDashboard = () => {
       setLoading(true)
       const res = await fetch(`/api/apps/tabungan/stats?month=${selectedMonth}`)
       const data = await res.json()
-      setStats(data)
+      // Ensure all arrays have default values
+      setStats({
+        totalIncome: data.totalIncome || 0,
+        totalExpenses: data.totalExpenses || 0,
+        totalSavings: data.totalSavings || 0,
+        balance: data.balance || 0,
+        savingsByCategory: data.savingsByCategory || [],
+        expensesByCategory: data.expensesByCategory || [],
+        memberContributions: data.memberContributions || [],
+        recentTransactions: data.recentTransactions || [],
+        transactionCount: data.transactionCount || 0
+      })
     } catch (error) {
       console.error('Failed to fetch stats:', error)
+      // Set default empty stats on error
+      setStats({
+        totalIncome: 0,
+        totalExpenses: 0,
+        totalSavings: 0,
+        balance: 0,
+        savingsByCategory: [],
+        expensesByCategory: [],
+        memberContributions: [],
+        recentTransactions: [],
+        transactionCount: 0
+      })
     } finally {
       setLoading(false)
     }
