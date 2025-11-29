@@ -1,14 +1,11 @@
-// Schema untuk Vercel Postgres / Neon / Supabase
-// Rename file ini menjadi schema.prisma sebelum deploy ke Vercel
-
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Untuk Vercel Postgres
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-1.1.x", "rhel-openssl-3.0.x"]
 }
 
 model Account {
@@ -17,12 +14,12 @@ model Account {
   type               String
   provider           String
   providerAccountId  String
-  refresh_token      String? @db.Text
-  access_token       String? @db.Text
+  refresh_token      String?
+  access_token       String?
   expires_at         Int?
   token_type         String?
   scope              String?
-  id_token           String? @db.Text
+  id_token           String?
   session_state      String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -63,7 +60,7 @@ model VerificationToken {
 model FamilyMember {
   id           String        @id @default(cuid())
   name         String
-  role         String
+  role         String        // Ayah, Ibu, Anak, dll
   avatar       String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -75,9 +72,10 @@ model SavingsCategory {
   name          String
   description   String?
   icon          String?
-  color         String?
-  targetAmount  Float?
+  color         String?       // Warna untuk UI
+  targetAmount  Float?        // Target tabungan (opsional)
 
+  // Relasi ke Jenis Simpan
   storageTypeId String?
   storageType   StorageType?  @relation(fields: [storageTypeId], references: [id], onDelete: SetNull)
 
@@ -92,8 +90,9 @@ model ExpenseCategory {
   description   String?
   icon          String?
   color         String?
-  budgetLimit   Float?
+  budgetLimit   Float?        // Batas anggaran bulanan (opsional)
 
+  // Relasi ke Jenis Simpan
   storageTypeId String?
   storageType   StorageType?  @relation(fields: [storageTypeId], references: [id], onDelete: SetNull)
 
@@ -103,28 +102,29 @@ model ExpenseCategory {
 }
 
 model StorageType {
-  id                String            @id @default(cuid())
-  name              String
-  description       String?
-  icon              String?
-  color             String?
-  accountNumber     String?
-  balance           Float             @default(0)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  savingsCategories SavingsCategory[]
-  expenseCategories ExpenseCategory[]
-  transactionsFrom  Transaction[]     @relation("TransactionFrom")
-  transactionsTo    Transaction[]     @relation("TransactionTo")
+  id                    String            @id @default(cuid())
+  name                  String            // Cash, Bank BCA, Bank Mandiri, GoPay, OVO, dll
+  description           String?
+  icon                  String?
+  color                 String?
+  accountNumber         String?           // Nomor rekening (opsional)
+  balance               Float             @default(0) // Saldo saat ini
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  savingsCategories     SavingsCategory[]
+  expenseCategories     ExpenseCategory[]
+  transactionsFrom      Transaction[]     @relation("TransactionFrom")
+  transactionsTo        Transaction[]     @relation("TransactionTo")
 }
 
 model Transaction {
   id                String           @id @default(cuid())
-  type              String
+  type              String           // 'income' | 'expense' | 'savings' | 'transfer'
   amount            Float
   description       String?
   date              DateTime         @default(now())
 
+  // Relations
   familyMemberId    String?
   familyMember      FamilyMember?    @relation(fields: [familyMemberId], references: [id], onDelete: SetNull)
 
@@ -134,6 +134,7 @@ model Transaction {
   expenseCategoryId String?
   expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
 
+  // Transfer relations - untuk transfer antar simpanan
   fromStorageTypeId String?
   fromStorageType   StorageType?     @relation("TransactionFrom", fields: [fromStorageTypeId], references: [id], onDelete: SetNull)
 
