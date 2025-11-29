@@ -1,5 +1,8 @@
 import Swal from 'sweetalert2'
 
+// Custom z-index to appear above navbar
+const customZIndex = 99999
+
 // Toast notification
 const Toast = Swal.mixin({
   toast: true,
@@ -7,9 +10,17 @@ const Toast = Swal.mixin({
   showConfirmButton: false,
   timer: 3000,
   timerProgressBar: true,
+  customClass: {
+    container: 'swal-container-top'
+  },
   didOpen: (toast) => {
     toast.onmouseenter = Swal.stopTimer
     toast.onmouseleave = Swal.resumeTimer
+    // Ensure toast is above navbar
+    const container = document.querySelector('.swal2-container') as HTMLElement
+    if (container) {
+      container.style.zIndex = String(customZIndex)
+    }
   }
 })
 
@@ -27,16 +38,25 @@ export const showErrorToast = (message: string) => {
   })
 }
 
-export const showDeleteConfirm = async (itemName: string = 'item ini'): Promise<boolean> => {
+export const showDeleteConfirm = async (message: string = 'Data ini akan dihapus permanen!'): Promise<boolean> => {
   const result = await Swal.fire({
     title: 'Yakin ingin menghapus?',
-    text: `${itemName} akan dihapus permanen!`,
+    text: message,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#d33',
     cancelButtonColor: '#3085d6',
     confirmButtonText: 'Ya, hapus!',
-    cancelButtonText: 'Batal'
+    cancelButtonText: 'Batal',
+    customClass: {
+      container: 'swal-container-top'
+    },
+    didOpen: () => {
+      const container = document.querySelector('.swal2-container') as HTMLElement
+      if (container) {
+        container.style.zIndex = String(customZIndex)
+      }
+    }
   })
   return result.isConfirmed
 }
@@ -46,7 +66,16 @@ export const showSuccess = (title: string, text?: string) => {
     title,
     text,
     icon: 'success',
-    confirmButtonText: 'OK'
+    confirmButtonText: 'OK',
+    customClass: {
+      container: 'swal-container-top'
+    },
+    didOpen: () => {
+      const container = document.querySelector('.swal2-container') as HTMLElement
+      if (container) {
+        container.style.zIndex = String(customZIndex)
+      }
+    }
   })
 }
 
@@ -55,7 +84,16 @@ export const showError = (title: string, text?: string) => {
     title,
     text,
     icon: 'error',
-    confirmButtonText: 'OK'
+    confirmButtonText: 'OK',
+    customClass: {
+      container: 'swal-container-top'
+    },
+    didOpen: () => {
+      const container = document.querySelector('.swal2-container') as HTMLElement
+      if (container) {
+        container.style.zIndex = String(customZIndex)
+      }
+    }
   })
 }
 

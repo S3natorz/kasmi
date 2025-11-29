@@ -115,7 +115,11 @@ const FamilyMembersTable = () => {
         body: JSON.stringify(body)
       })
 
-      if (!res.ok) throw new Error('Failed to save')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        console.error('API Error:', errorData)
+        throw new Error(errorData.error || 'Failed to save')
+      }
 
       handleCloseDialog()
       fetchData()
