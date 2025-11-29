@@ -424,20 +424,23 @@ const TransactionListTable = () => {
       <Card>
         <CardHeader title='Daftar Transaksi' />
         <Divider />
-        <div className='flex flex-col sm:flex-row flex-wrap justify-between gap-4 p-4 sm:p-6'>
-          <div className='flex flex-col sm:flex-row flex-wrap gap-4 w-full sm:w-auto'>
+        <div className='flex flex-col gap-4 p-4 sm:p-6'>
+          {/* Filters Row */}
+          <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 w-full'>
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
               placeholder='Cari transaksi...'
-              className='w-full sm:w-auto'
+              className='w-full sm:w-auto sm:min-is-[200px]'
+              size='small'
             />
             <CustomTextField
               select
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value)}
-              className='w-full sm:min-is-[150px]'
+              className='w-full sm:w-auto sm:min-is-[150px]'
               placeholder='Filter Tipe'
+              size='small'
             >
               <MenuItem value=''>Semua Tipe</MenuItem>
               <MenuItem value='income'>Pemasukan</MenuItem>
@@ -450,8 +453,9 @@ const TransactionListTable = () => {
                 select
                 value={categoryFilter}
                 onChange={e => setCategoryFilter(e.target.value)}
-                className='min-is-[180px]'
+                className='w-full sm:w-auto sm:min-is-[180px]'
                 placeholder='Filter Kategori'
+                size='small'
               >
                 <MenuItem value=''>Semua Kategori</MenuItem>
                 {getCategoryOptions().map(cat => (
@@ -462,17 +466,39 @@ const TransactionListTable = () => {
               </CustomTextField>
             )}
           </div>
-          <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => handleOpenDialog()}>
-            Tambah Transaksi
-          </Button>
+          {/* Button Row */}
+          <div className='flex justify-end'>
+            <Button
+              variant='contained'
+              startIcon={<i className='tabler-plus' />}
+              onClick={() => handleOpenDialog()}
+              size='small'
+              className='w-full sm:w-auto'
+            >
+              Tambah Transaksi
+            </Button>
+          </div>
         </div>
         <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
+          <table className={tableStyles.table} style={{ minWidth: 800 }}>
             <thead>
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
+                  {headerGroup.headers.map((header, index) => (
+                    <th
+                      key={header.id}
+                      style={
+                        index === 0
+                          ? {
+                              position: 'sticky',
+                              left: 0,
+                              zIndex: 1,
+                              backgroundColor: 'var(--mui-palette-background-paper)',
+                              minWidth: 140
+                            }
+                          : undefined
+                      }
+                    >
                       {header.isPlaceholder ? null : (
                         <div
                           className={classnames({
@@ -505,8 +531,22 @@ const TransactionListTable = () => {
               <tbody>
                 {table.getRowModel().rows.map(row => (
                   <tr key={row.id}>
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                    {row.getVisibleCells().map((cell, index) => (
+                      <td
+                        key={cell.id}
+                        style={
+                          index === 0
+                            ? {
+                                position: 'sticky',
+                                left: 0,
+                                zIndex: 1,
+                                backgroundColor: 'var(--mui-palette-background-paper)'
+                              }
+                            : undefined
+                        }
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
                     ))}
                   </tr>
                 ))}
