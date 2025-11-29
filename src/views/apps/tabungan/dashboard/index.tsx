@@ -3,6 +3,9 @@
 // React Imports
 import { useEffect, useState } from 'react'
 
+// Next Imports
+import { useRouter } from 'next/navigation'
+
 // MUI Imports
 import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
@@ -13,6 +16,8 @@ import LinearProgress from '@mui/material/LinearProgress'
 import Chip from '@mui/material/Chip'
 import MenuItem from '@mui/material/MenuItem'
 import Box from '@mui/material/Box'
+import Fab from '@mui/material/Fab'
+import Tooltip from '@mui/material/Tooltip'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -55,6 +60,7 @@ const formatCurrency = (amount: number) => {
 }
 
 const TabunganDashboard = () => {
+  const router = useRouter()
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -408,6 +414,29 @@ const TabunganDashboard = () => {
           </CardContent>
         </Card>
       </Grid>
+
+      {/* Floating Action Button - Tambah Transaksi */}
+      <Tooltip title="Tambah Transaksi" placement="top">
+        <Fab
+          color="primary"
+          aria-label="tambah transaksi"
+          onClick={() => router.push('/en/apps/tabungan/transactions')}
+          sx={{
+            position: 'fixed',
+            bottom: { xs: 16, sm: 24 },
+            right: { xs: 16, sm: 24 },
+            zIndex: 1000,
+            boxShadow: 3,
+            '&:hover': {
+              transform: 'scale(1.1)',
+              boxShadow: 6
+            },
+            transition: 'all 0.2s ease-in-out'
+          }}
+        >
+          <i className='tabler-plus text-xl' />
+        </Fab>
+      </Tooltip>
     </Grid>
   )
 }
