@@ -502,12 +502,25 @@ const ExpenseCategoriesTable = () => {
           </Button>
         </div>
         <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
+          <table className={tableStyles.table} style={{ minWidth: 700 }}>
             <thead>
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
+                  {headerGroup.headers.map((header, index) => (
+                    <th
+                      key={header.id}
+                      style={
+                        index === 0
+                          ? {
+                              position: 'sticky',
+                              left: 0,
+                              zIndex: 1,
+                              backgroundColor: 'var(--mui-palette-background-paper)',
+                              minWidth: 180
+                            }
+                          : undefined
+                      }
+                    >
                       {header.isPlaceholder ? null : (
                         <div
                           className={classnames({
@@ -533,7 +546,20 @@ const ExpenseCategoriesTable = () => {
                 {[...Array(5)].map((_, index) => (
                   <tr key={index}>
                     {[...Array(table.getVisibleFlatColumns().length)].map((_, cellIndex) => (
-                      <td key={cellIndex} className='py-3'>
+                      <td
+                        key={cellIndex}
+                        className='py-3'
+                        style={
+                          cellIndex === 0
+                            ? {
+                                position: 'sticky',
+                                left: 0,
+                                zIndex: 1,
+                                backgroundColor: 'var(--mui-palette-background-paper)'
+                              }
+                            : undefined
+                        }
+                      >
                         <div className='animate-pulse bg-gray-200 dark:bg-gray-700 h-4 rounded w-3/4'></div>
                       </td>
                     ))}
@@ -552,8 +578,22 @@ const ExpenseCategoriesTable = () => {
               <tbody>
                 {table.getRowModel().rows.map(row => (
                   <tr key={row.id}>
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                    {row.getVisibleCells().map((cell, index) => (
+                      <td
+                        key={cell.id}
+                        style={
+                          index === 0
+                            ? {
+                                position: 'sticky',
+                                left: 0,
+                                zIndex: 1,
+                                backgroundColor: 'var(--mui-palette-background-paper)'
+                              }
+                            : undefined
+                        }
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
                     ))}
                   </tr>
                 ))}
