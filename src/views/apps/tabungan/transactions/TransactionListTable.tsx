@@ -163,11 +163,11 @@ const TransactionListTable = () => {
         storageRes.json()
       ])
 
-      setData(transactions)
-      setFamilyMembers(members)
-      setSavingsCategories(savings)
-      setExpenseCategories(expenses)
-      setStorageTypes(storages)
+      setData(Array.isArray(transactions) ? transactions : [])
+      setFamilyMembers(Array.isArray(members) ? members : [])
+      setSavingsCategories(Array.isArray(savings) ? savings : [])
+      setExpenseCategories(Array.isArray(expenses) ? expenses : [])
+      setStorageTypes(Array.isArray(storages) ? storages : [])
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
