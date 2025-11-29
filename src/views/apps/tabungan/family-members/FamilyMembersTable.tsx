@@ -68,7 +68,7 @@ const FamilyMembersTable = () => {
       setLoading(true)
       const res = await fetch('/api/apps/tabungan/family-members')
       const members = await res.json()
-      setData(members)
+      setData(Array.isArray(members) ? members : [])
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {

@@ -144,7 +144,7 @@ const StorageTypesTable = () => {
       setLoading(true)
       const res = await fetch('/api/apps/tabungan/storage-types')
       const items = await res.json()
-      setData(items)
+      setData(Array.isArray(items) ? items : [])
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {

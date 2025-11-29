@@ -301,8 +301,8 @@ const SavingsCategoriesTable = () => {
         fetch('/api/apps/tabungan/storage-types')
       ])
       const [categories, storages] = await Promise.all([catRes.json(), storageRes.json()])
-      setData(categories)
-      setStorageTypes(storages)
+      setData(Array.isArray(categories) ? categories : [])
+      setStorageTypes(Array.isArray(storages) ? storages : [])
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
