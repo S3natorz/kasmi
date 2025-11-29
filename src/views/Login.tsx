@@ -114,8 +114,8 @@ const Login = ({ mode }: { mode: SystemMode }) => {
   } = useForm<FormData>({
     resolver: valibotResolver(schema),
     defaultValues: {
-      email: 'admin@vuexy.com',
-      password: 'admin'
+      email: '',
+      password: ''
     }
   })
 
@@ -173,10 +173,10 @@ const Login = ({ mode }: { mode: SystemMode }) => {
             <Typography>Please sign-in to your account and start the adventure</Typography>
           </div>
           <Alert icon={false} className='bg-[var(--mui-palette-primary-lightOpacity)]'>
-            <Typography variant='body2' color='primary.main'>
+            {/* <Typography variant='body2' color='primary.main'>
               Email: <span className='font-medium'>admin@vuexy.com</span> / Pass:{' '}
               <span className='font-medium'>admin</span>
-            </Typography>
+            </Typography> */}
           </Alert>
           <form
             noValidate
@@ -257,7 +257,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
             <Button fullWidth variant='contained' type='submit'>
               Login
             </Button>
-            <div className='flex justify-center items-center flex-wrap gap-2'>
+            {/* <div className='flex justify-center items-center flex-wrap gap-2'>
               <Typography>New on our platform?</Typography>
               <Typography component={Link} href={getLocalizedUrl('/register', locale as Locale)} color='primary.main'>
                 Create an account
@@ -272,7 +272,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
               onClick={() => signIn('google')}
             >
               Sign in with Google
-            </Button>
+            </Button> */}
           </form>
         </div>
       </div>
