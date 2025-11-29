@@ -93,15 +93,31 @@ const iconSuggestions = [
   // Lainnya
   { label: 'Brankas', value: 'tabler-safe' },
   { label: 'Celengan', value: 'tabler-piggy-bank' },
-  { label: 'Tabungan', value: 'tabler-moneybag' },
+  { label: 'Tabungan', value: 'tabler-moneybag' }
 ]
 
 // Color presets
 const colorPresets = [
-  '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5',
-  '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50',
-  '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800',
-  '#ff5722', '#795548', '#9e9e9e', '#607d8b', '#000000',
+  '#f44336',
+  '#e91e63',
+  '#9c27b0',
+  '#673ab7',
+  '#3f51b5',
+  '#2196f3',
+  '#03a9f4',
+  '#00bcd4',
+  '#009688',
+  '#4caf50',
+  '#8bc34a',
+  '#cddc39',
+  '#ffeb3b',
+  '#ffc107',
+  '#ff9800',
+  '#ff5722',
+  '#795548',
+  '#9e9e9e',
+  '#607d8b',
+  '#000000'
 ]
 
 const columnHelper = createColumnHelper<StorageTypeType>()
@@ -240,11 +256,7 @@ const StorageTypesTable = () => {
         header: 'Warna',
         cell: ({ row }) =>
           row.original.color ? (
-            <Chip
-              label={row.original.color}
-              size='small'
-              sx={{ backgroundColor: row.original.color, color: '#fff' }}
-            />
+            <Chip label={row.original.color} size='small' sx={{ backgroundColor: row.original.color, color: '#fff' }} />
           ) : (
             <Typography>-</Typography>
           )
@@ -397,7 +409,7 @@ const StorageTypesTable = () => {
               <Autocomplete
                 freeSolo
                 options={iconSuggestions}
-                getOptionLabel={(option) => typeof option === 'string' ? option : option.value}
+                getOptionLabel={option => (typeof option === 'string' ? option : option.value)}
                 value={formData.icon}
                 onChange={(_, newValue) => {
                   const value = typeof newValue === 'string' ? newValue : newValue?.value || ''
@@ -409,13 +421,18 @@ const StorageTypesTable = () => {
                 renderOption={(props, option) => {
                   const { key, ...otherProps } = props
                   return (
-                    <Box component='li' key={key} {...otherProps} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      component='li'
+                      key={key}
+                      {...otherProps}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                    >
                       <i className={`${option.value} text-xl`} />
                       <span>{option.label}</span>
                     </Box>
                   )
                 }}
-                renderInput={(params) => (
+                renderInput={params => (
                   <CustomTextField
                     {...params}
                     label='Icon'
@@ -424,7 +441,10 @@ const StorageTypesTable = () => {
                       input: {
                         ...params.InputProps,
                         startAdornment: formData.icon ? (
-                          <i className={`${formData.icon} text-xl`} style={{ marginRight: 8, color: formData.color || undefined }} />
+                          <i
+                            className={`${formData.icon} text-xl`}
+                            style={{ marginRight: 8, color: formData.color || undefined }}
+                          />
                         ) : null
                       }
                     }}
@@ -439,7 +459,7 @@ const StorageTypesTable = () => {
                 value={formData.color}
                 onChange={e => setFormData({ ...formData, color: e.target.value })}
                 placeholder='#4caf50'
-                onClick={(e) => setColorAnchorEl(e.currentTarget)}
+                onClick={e => setColorAnchorEl(e.currentTarget)}
                 slotProps={{
                   input: {
                     startAdornment: (
@@ -465,7 +485,7 @@ const StorageTypesTable = () => {
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               >
                 <Box sx={{ p: 2, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>
-                  {colorPresets.map((color) => (
+                  {colorPresets.map(color => (
                     <Box
                       key={color}
                       onClick={() => {

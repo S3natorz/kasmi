@@ -74,11 +74,11 @@ model SavingsCategory {
   icon          String?
   color         String?       // Warna untuk UI
   targetAmount  Float?        // Target tabungan (opsional)
-  
+
   // Relasi ke Jenis Simpan
   storageTypeId String?
   storageType   StorageType?  @relation(fields: [storageTypeId], references: [id], onDelete: SetNull)
-  
+
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   transactions  Transaction[]
@@ -91,11 +91,11 @@ model ExpenseCategory {
   icon          String?
   color         String?
   budgetLimit   Float?        // Batas anggaran bulanan (opsional)
-  
+
   // Relasi ke Jenis Simpan
   storageTypeId String?
   storageType   StorageType?  @relation(fields: [storageTypeId], references: [id], onDelete: SetNull)
-  
+
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   transactions  Transaction[]
@@ -137,7 +137,7 @@ model Transaction {
   // Transfer relations - untuk transfer antar simpanan
   fromStorageTypeId String?
   fromStorageType   StorageType?     @relation("TransactionFrom", fields: [fromStorageTypeId], references: [id], onDelete: SetNull)
-  
+
   toStorageTypeId   String?
   toStorageType     StorageType?     @relation("TransactionTo", fields: [toStorageTypeId], references: [id], onDelete: SetNull)
 

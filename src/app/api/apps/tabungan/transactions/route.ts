@@ -78,12 +78,12 @@ export async function POST(request: Request) {
       if (!body.fromStorageTypeId || !body.toStorageTypeId) {
         return NextResponse.json({ error: 'Transfer requires source and destination' }, { status: 400 })
       }
-      
+
       // Decrease from source, increase to destination
       await updateStorageBalance(body.fromStorageTypeId, amount, false)
       await updateStorageBalance(body.toStorageTypeId, amount, true)
     }
-    
+
     // Handle savings - increase storage balance
     if (body.type === 'savings' && body.savingsCategoryId) {
       const category = await prisma.savingsCategory.findUnique({
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
         await updateStorageBalance(category.storageTypeId, amount, true)
       }
     }
-    
+
     // Handle expense - decrease storage balance
     if (body.type === 'expense' && body.expenseCategoryId) {
       const category = await prisma.expenseCategory.findUnique({
