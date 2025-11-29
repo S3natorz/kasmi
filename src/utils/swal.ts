@@ -13,7 +13,7 @@ const Toast = Swal.mixin({
   customClass: {
     container: 'swal-container-top'
   },
-  didOpen: (toast) => {
+  didOpen: toast => {
     toast.onmouseenter = Swal.stopTimer
     toast.onmouseleave = Swal.resumeTimer
     // Ensure toast is above navbar

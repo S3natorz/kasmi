@@ -317,9 +317,9 @@ const StorageTypesTable = () => {
                 size='small'
                 className='w-full sm:w-auto'
               />
-              <Button 
-                variant='contained' 
-                startIcon={<i className='tabler-plus' />} 
+              <Button
+                variant='contained'
+                startIcon={<i className='tabler-plus' />}
                 onClick={() => handleOpenDialog()}
                 size='small'
                 className='whitespace-nowrap'
@@ -344,14 +344,18 @@ const StorageTypesTable = () => {
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header, index) => (
-                    <th 
+                    <th
                       key={header.id}
-                      style={index === 0 ? {
-                        position: 'sticky',
-                        left: 0,
-                        zIndex: 1,
-                        backgroundColor: 'var(--mui-palette-background-paper)'
-                      } : undefined}
+                      style={
+                        index === 0
+                          ? {
+                              position: 'sticky',
+                              left: 0,
+                              zIndex: 1,
+                              backgroundColor: 'var(--mui-palette-background-paper)'
+                            }
+                          : undefined
+                      }
                     >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
@@ -364,15 +368,19 @@ const StorageTypesTable = () => {
                 [...Array(5)].map((_, index) => (
                   <tr key={index}>
                     {[...Array(columns.length)].map((_, cellIndex) => (
-                      <td 
-                        key={cellIndex} 
+                      <td
+                        key={cellIndex}
                         className='py-3'
-                        style={cellIndex === 0 ? {
-                          position: 'sticky',
-                          left: 0,
-                          zIndex: 1,
-                          backgroundColor: 'var(--mui-palette-background-paper)'
-                        } : undefined}
+                        style={
+                          cellIndex === 0
+                            ? {
+                                position: 'sticky',
+                                left: 0,
+                                zIndex: 1,
+                                backgroundColor: 'var(--mui-palette-background-paper)'
+                              }
+                            : undefined
+                        }
                       >
                         <div className='animate-pulse bg-gray-200 dark:bg-gray-700 h-4 rounded w-3/4'></div>
                       </td>
@@ -389,14 +397,18 @@ const StorageTypesTable = () => {
                 table.getRowModel().rows.map(row => (
                   <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
                     {row.getVisibleCells().map((cell, index) => (
-                      <td 
+                      <td
                         key={cell.id}
-                        style={index === 0 ? {
-                          position: 'sticky',
-                          left: 0,
-                          zIndex: 1,
-                          backgroundColor: 'var(--mui-palette-background-paper)'
-                        } : undefined}
+                        style={
+                          index === 0
+                            ? {
+                                position: 'sticky',
+                                left: 0,
+                                zIndex: 1,
+                                backgroundColor: 'var(--mui-palette-background-paper)'
+                              }
+                            : undefined
+                        }
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>

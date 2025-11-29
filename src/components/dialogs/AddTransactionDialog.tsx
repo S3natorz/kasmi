@@ -138,22 +138,27 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
 
   const getTypeLabel = () => {
     switch (formData.type) {
-      case 'income': return 'Pemasukan'
-      case 'expense': return 'Pengeluaran'
-      case 'savings': return 'Tabungan'
-      case 'transfer': return 'Transfer'
-      default: return ''
+      case 'income':
+        return 'Pemasukan'
+      case 'expense':
+        return 'Pengeluaran'
+      case 'savings':
+        return 'Tabungan'
+      case 'transfer':
+        return 'Transfer'
+      default:
+        return ''
     }
   }
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth='sm' 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth='sm'
       fullWidth
       PaperProps={{
-        sx: { 
+        sx: {
           m: { xs: 2, sm: 3 },
           maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' }
         }
@@ -174,14 +179,16 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
               fullWidth
               label='Tipe Transaksi'
               value={formData.type}
-              onChange={e => setFormData({ 
-                ...formData, 
-                type: e.target.value as any,
-                savingsCategoryId: '',
-                expenseCategoryId: '',
-                fromStorageTypeId: '',
-                toStorageTypeId: ''
-              })}
+              onChange={e =>
+                setFormData({
+                  ...formData,
+                  type: e.target.value as any,
+                  savingsCategoryId: '',
+                  expenseCategoryId: '',
+                  fromStorageTypeId: '',
+                  toStorageTypeId: ''
+                })
+              }
             >
               <MenuItem value='income'>Pemasukan</MenuItem>
               <MenuItem value='expense'>Pengeluaran</MenuItem>
@@ -315,11 +322,13 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
                   onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
                 >
                   <MenuItem value=''>-- Pilih --</MenuItem>
-                  {storageTypes.filter(s => s.id !== formData.fromStorageTypeId).map(storage => (
-                    <MenuItem key={storage.id} value={storage.id}>
-                      {storage.name}
-                    </MenuItem>
-                  ))}
+                  {storageTypes
+                    .filter(s => s.id !== formData.fromStorageTypeId)
+                    .map(storage => (
+                      <MenuItem key={storage.id} value={storage.id}>
+                        {storage.name}
+                      </MenuItem>
+                    ))}
                 </CustomTextField>
               </Grid>
             </>
@@ -370,11 +379,7 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
         <Button variant='outlined' color='secondary' onClick={onClose}>
           Batal
         </Button>
-        <Button 
-          variant='contained' 
-          onClick={handleSubmit} 
-          disabled={loading || !formData.amount}
-        >
+        <Button variant='contained' onClick={handleSubmit} disabled={loading || !formData.amount}>
           {loading ? 'Menyimpan...' : 'Simpan'}
         </Button>
       </DialogActions>

@@ -63,7 +63,10 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["finance", "productivity"],
+  "categories": [
+    "finance",
+    "productivity"
+  ],
   "screenshots": [],
   "prefer_related_applications": false
 }

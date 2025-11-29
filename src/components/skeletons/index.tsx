@@ -13,21 +13,21 @@ export const TableSkeleton = ({ rows = 5, columns = 5 }: { rows?: number; column
     <CardHeader title={<Skeleton width={200} />} />
     <Box sx={{ p: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-        <Skeleton variant="rectangular" width={200} height={40} sx={{ borderRadius: 1 }} />
-        <Skeleton variant="rectangular" width={150} height={40} sx={{ borderRadius: 1 }} />
+        <Skeleton variant='rectangular' width={200} height={40} sx={{ borderRadius: 1 }} />
+        <Skeleton variant='rectangular' width={150} height={40} sx={{ borderRadius: 1 }} />
       </Box>
       <Box sx={{ overflow: 'hidden' }}>
         {/* Header */}
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
           {Array.from({ length: columns }).map((_, i) => (
-            <Skeleton key={i} variant="text" width={`${100 / columns}%`} height={40} />
+            <Skeleton key={i} variant='text' width={`${100 / columns}%`} height={40} />
           ))}
         </Box>
         {/* Rows */}
         {Array.from({ length: rows }).map((_, rowIndex) => (
           <Box key={rowIndex} sx={{ display: 'flex', gap: 2, mb: 2 }}>
             {Array.from({ length: columns }).map((_, colIndex) => (
-              <Skeleton key={colIndex} variant="text" width={`${100 / columns}%`} height={30} />
+              <Skeleton key={colIndex} variant='text' width={`${100 / columns}%`} height={30} />
             ))}
           </Box>
         ))}
@@ -45,10 +45,10 @@ export const DashboardStatsSkeleton = () => (
         <Card>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Skeleton variant="circular" width={48} height={48} />
+              <Skeleton variant='circular' width={48} height={48} />
               <Box sx={{ flex: 1 }}>
-                <Skeleton variant="text" width="60%" height={20} />
-                <Skeleton variant="text" width="80%" height={32} />
+                <Skeleton variant='text' width='60%' height={20} />
+                <Skeleton variant='text' width='80%' height={32} />
               </Box>
             </Box>
           </CardContent>
@@ -65,10 +65,10 @@ export const DashboardStatsSkeleton = () => (
             {Array.from({ length: 4 }).map((_, i) => (
               <Grid key={i} size={{ xs: 6, md: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}>
-                  <Skeleton variant="circular" width={40} height={40} />
+                  <Skeleton variant='circular' width={40} height={40} />
                   <Box sx={{ flex: 1 }}>
-                    <Skeleton variant="text" width="70%" />
-                    <Skeleton variant="text" width="50%" height={28} />
+                    <Skeleton variant='text' width='70%' />
+                    <Skeleton variant='text' width='50%' height={28} />
                   </Box>
                 </Box>
               </Grid>
@@ -86,10 +86,10 @@ export const DashboardStatsSkeleton = () => (
           {Array.from({ length: 4 }).map((_, i) => (
             <Box key={i} sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Skeleton variant="text" width="40%" />
-                <Skeleton variant="text" width="20%" />
+                <Skeleton variant='text' width='40%' />
+                <Skeleton variant='text' width='20%' />
               </Box>
-              <Skeleton variant="rectangular" height={8} sx={{ borderRadius: 1 }} />
+              <Skeleton variant='rectangular' height={8} sx={{ borderRadius: 1 }} />
             </Box>
           ))}
         </CardContent>
@@ -103,10 +103,10 @@ export const DashboardStatsSkeleton = () => (
           {Array.from({ length: 4 }).map((_, i) => (
             <Box key={i} sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Skeleton variant="text" width="40%" />
-                <Skeleton variant="text" width="20%" />
+                <Skeleton variant='text' width='40%' />
+                <Skeleton variant='text' width='20%' />
               </Box>
-              <Skeleton variant="rectangular" height={8} sx={{ borderRadius: 1 }} />
+              <Skeleton variant='rectangular' height={8} sx={{ borderRadius: 1 }} />
             </Box>
           ))}
         </CardContent>
@@ -120,12 +120,12 @@ export const DashboardStatsSkeleton = () => (
         <CardContent>
           {Array.from({ length: 5 }).map((_, i) => (
             <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
-              <Skeleton variant="circular" width={40} height={40} />
+              <Skeleton variant='circular' width={40} height={40} />
               <Box sx={{ flex: 1 }}>
-                <Skeleton variant="text" width="30%" />
-                <Skeleton variant="text" width="20%" height={16} />
+                <Skeleton variant='text' width='30%' />
+                <Skeleton variant='text' width='20%' height={16} />
               </Box>
-              <Skeleton variant="text" width={100} />
+              <Skeleton variant='text' width={100} />
             </Box>
           ))}
         </CardContent>
@@ -139,10 +139,10 @@ export const CardSkeleton = () => (
   <Card>
     <CardContent>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Skeleton variant="circular" width={48} height={48} />
+        <Skeleton variant='circular' width={48} height={48} />
         <Box sx={{ flex: 1 }}>
-          <Skeleton variant="text" width="60%" />
-          <Skeleton variant="text" width="40%" height={28} />
+          <Skeleton variant='text' width='60%' />
+          <Skeleton variant='text' width='40%' height={28} />
         </Box>
       </Box>
     </CardContent>
@@ -154,8 +154,8 @@ export const FormSkeleton = ({ fields = 4 }: { fields?: number }) => (
   <Box sx={{ p: 4 }}>
     {Array.from({ length: fields }).map((_, i) => (
       <Box key={i} sx={{ mb: 4 }}>
-        <Skeleton variant="text" width={100} height={20} sx={{ mb: 1 }} />
-        <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
+        <Skeleton variant='text' width={100} height={20} sx={{ mb: 1 }} />
+        <Skeleton variant='rectangular' height={56} sx={{ borderRadius: 1 }} />
       </Box>
     ))}
   </Box>

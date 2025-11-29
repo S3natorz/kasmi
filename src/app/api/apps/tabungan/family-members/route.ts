@@ -21,11 +21,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     console.log('Creating family member with data:', body)
-    
+
     if (!body.name || !body.role) {
       return NextResponse.json({ error: 'Name and role are required' }, { status: 400 })
     }
-    
+
     const member = await prisma.familyMember.create({
       data: {
         name: body.name,
