@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
         locale: false
       },
       {
-        source: '/:path((?!en|fr|ar|front-pages|images|api|favicon.ico).*)*',
+        source: '/:path((?!en|fr|ar|front-pages|images|api|icons|favicon.ico|manifest.json|apple-touch-icon|icon-|sw.js|workbox-).*)*',
         destination: '/en/:path*',
         permanent: true,
         locale: false
