@@ -12,19 +12,22 @@ import Typography from '@mui/material/Typography'
 import LinearProgress from '@mui/material/LinearProgress'
 import Chip from '@mui/material/Chip'
 import MenuItem from '@mui/material/MenuItem'
+import Box from '@mui/material/Box'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 import CustomTextField from '@core/components/mui/TextField'
+import { DashboardStatsSkeleton } from '@/components/skeletons'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
+import type { StorageTypeType } from '@/types/apps/tabunganTypes'
 
 type StatsData = {
   totalIncome: number
   totalExpenses: number
   totalSavings: number
-  balance: number
+  storageBalances: StorageTypeType[]
   savingsByCategory: {
     category: string
     amount: number
@@ -38,13 +41,6 @@ type StatsData = {
     budget?: number
     color?: string
     icon?: string
-  }[]
-  memberContributions: {
-    name: string
-    role: string
-    avatar?: string
-    income: number
-    savings: number
   }[]
   recentTransactions: any[]
   transactionCount: number
@@ -69,31 +65,31 @@ const TabunganDashboard = () => {
   const fetchStats = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`/api/apps/tabungan/stats?month=${selectedMonth}`)
-      const data = await res.json()
-      // Ensure all arrays have default values
+      const [statsRes, storageRes] = await Promise.all([
+        fetch(`/api/apps/tabungan/stats?month=${selectedMonth}`),
+        fetch('/api/apps/tabungan/storage-types')
+      ])
+      const [data, storages] = await Promise.all([statsRes.json(), storageRes.json()])
+
       setStats({
         totalIncome: data.totalIncome || 0,
         totalExpenses: data.totalExpenses || 0,
         totalSavings: data.totalSavings || 0,
-        balance: data.balance || 0,
+        storageBalances: Array.isArray(storages) ? storages : [],
         savingsByCategory: data.savingsByCategory || [],
         expensesByCategory: data.expensesByCategory || [],
-        memberContributions: data.memberContributions || [],
         recentTransactions: data.recentTransactions || [],
         transactionCount: data.transactionCount || 0
       })
     } catch (error) {
       console.error('Failed to fetch stats:', error)
-      // Set default empty stats on error
       setStats({
         totalIncome: 0,
         totalExpenses: 0,
         totalSavings: 0,
-        balance: 0,
+        storageBalances: [],
         savingsByCategory: [],
         expensesByCategory: [],
-        memberContributions: [],
         recentTransactions: [],
         transactionCount: 0
       })
@@ -119,20 +115,17 @@ const TabunganDashboard = () => {
   }
 
   if (loading || !stats) {
-    return (
-      <Card>
-        <CardContent>
-          <Typography>Loading...</Typography>
-        </CardContent>
-      </Card>
-    )
+    return <DashboardStatsSkeleton />
   }
 
+  // Calculate total balance from all storage types
+  const totalBalance = stats.storageBalances.reduce((sum, s) => sum + (s.balance || 0), 0)
+
   const statsCards: { title: string; value: number; icon: string; color: ThemeColor }[] = [
-    { title: 'Total Pemasukan', value: stats.totalIncome, icon: 'tabler-arrow-up', color: 'success' },
-    { title: 'Total Pengeluaran', value: stats.totalExpenses, icon: 'tabler-arrow-down', color: 'error' },
-    { title: 'Total Tabungan', value: stats.totalSavings, icon: 'tabler-coin', color: 'info' },
-    { title: 'Saldo', value: stats.balance, icon: 'tabler-wallet', color: 'primary' }
+    { title: 'Pemasukan Bulan Ini', value: stats.totalIncome, icon: 'tabler-arrow-up', color: 'success' },
+    { title: 'Pengeluaran Bulan Ini', value: stats.totalExpenses, icon: 'tabler-arrow-down', color: 'error' },
+    { title: 'Tabungan Bulan Ini', value: stats.totalSavings, icon: 'tabler-coin', color: 'info' },
+    { title: 'Total Transaksi', value: stats.transactionCount, icon: 'tabler-receipt', color: 'warning' }
   ]
 
   return (
@@ -140,13 +133,13 @@ const TabunganDashboard = () => {
       {/* Month Filter */}
       <Grid size={{ xs: 12 }}>
         <Card>
-          <CardContent className='flex items-center justify-between'>
+          <CardContent className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
             <Typography variant='h5'>Dashboard Tabungan Keluarga</Typography>
             <CustomTextField
               select
               value={selectedMonth}
               onChange={e => setSelectedMonth(e.target.value)}
-              className='min-is-[200px]'
+              className='min-is-[200px] w-full sm:w-auto'
             >
               {getMonthOptions().map(option => (
                 <MenuItem key={option.value} value={option.value}>
@@ -160,15 +153,17 @@ const TabunganDashboard = () => {
 
       {/* Statistics Cards */}
       {statsCards.map((stat, index) => (
-        <Grid key={index} size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid key={index} size={{ xs: 6, md: 3 }}>
           <Card>
-            <CardContent className='flex items-center gap-4'>
-              <CustomAvatar color={stat.color} variant='rounded' size={50} skin='light'>
-                <i className={`${stat.icon} text-2xl`} />
+            <CardContent className='flex items-center gap-3'>
+              <CustomAvatar color={stat.color} variant='rounded' size={48} skin='light'>
+                <i className={`${stat.icon} text-xl`} />
               </CustomAvatar>
-              <div className='flex flex-col'>
-                <Typography variant='h5'>{formatCurrency(stat.value)}</Typography>
-                <Typography variant='body2' color='text.secondary'>
+              <div className='flex flex-col overflow-hidden'>
+                <Typography variant='h6' className='truncate'>
+                  {stat.title === 'Total Transaksi' ? stat.value : formatCurrency(stat.value)}
+                </Typography>
+                <Typography variant='body2' color='text.secondary' className='truncate'>
                   {stat.title}
                 </Typography>
               </div>
@@ -177,9 +172,66 @@ const TabunganDashboard = () => {
         </Grid>
       ))}
 
+      {/* Storage Balances - NEW: List saldo per Jenis Simpan */}
+      <Grid size={{ xs: 12 }}>
+        <Card>
+          <CardHeader 
+            title='Saldo Simpanan' 
+            subheader={`Total: ${formatCurrency(totalBalance)}`}
+          />
+          <CardContent>
+            <Grid container spacing={4}>
+              {stats.storageBalances.length > 0 ? (
+                stats.storageBalances.map((storage, index) => (
+                  <Grid key={index} size={{ xs: 6, sm: 4, md: 3 }}>
+                    <Box 
+                      sx={{ 
+                        p: 3, 
+                        borderRadius: 2, 
+                        bgcolor: 'action.hover',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
+                      }}
+                    >
+                      <CustomAvatar 
+                        variant='rounded' 
+                        size={44} 
+                        skin='light'
+                        sx={{ bgcolor: storage.color ? `${storage.color}20` : undefined }}
+                      >
+                        {storage.icon ? (
+                          <i className={storage.icon} style={{ color: storage.color || undefined }} />
+                        ) : (
+                          <i className='tabler-wallet' />
+                        )}
+                      </CustomAvatar>
+                      <div className='flex flex-col overflow-hidden'>
+                        <Typography variant='body2' color='text.secondary' className='truncate'>
+                          {storage.name}
+                        </Typography>
+                        <Typography variant='h6' className='truncate'>
+                          {formatCurrency(storage.balance || 0)}
+                        </Typography>
+                      </div>
+                    </Box>
+                  </Grid>
+                ))
+              ) : (
+                <Grid size={{ xs: 12 }}>
+                  <Typography color='text.secondary' textAlign='center'>
+                    Belum ada jenis simpanan. Tambahkan di menu Jenis Simpan.
+                  </Typography>
+                </Grid>
+              )}
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
+
       {/* Savings Progress */}
       <Grid size={{ xs: 12, md: 6 }}>
-        <Card>
+        <Card sx={{ height: '100%' }}>
           <CardHeader title='Progress Tabungan' />
           <CardContent className='flex flex-col gap-4'>
             {stats.savingsByCategory.length > 0 ? (
@@ -187,7 +239,7 @@ const TabunganDashboard = () => {
                 const progress = item.target ? Math.min((item.amount / item.target) * 100, 100) : 0
                 return (
                   <div key={index} className='flex flex-col gap-2'>
-                    <div className='flex items-center justify-between'>
+                    <div className='flex items-center justify-between flex-wrap gap-1'>
                       <Typography variant='body1'>{item.category}</Typography>
                       <Typography variant='body2' color='text.secondary'>
                         {formatCurrency(item.amount)} {item.target && `/ ${formatCurrency(item.target)}`}
@@ -198,7 +250,7 @@ const TabunganDashboard = () => {
                         variant='determinate'
                         value={progress}
                         color={progress >= 100 ? 'success' : 'primary'}
-                        className='bs-2'
+                        sx={{ height: 8, borderRadius: 1 }}
                       />
                     )}
                   </div>
@@ -213,7 +265,7 @@ const TabunganDashboard = () => {
 
       {/* Expense Budget */}
       <Grid size={{ xs: 12, md: 6 }}>
-        <Card>
+        <Card sx={{ height: '100%' }}>
           <CardHeader title='Pengeluaran per Kategori' />
           <CardContent className='flex flex-col gap-4'>
             {stats.expensesByCategory.length > 0 ? (
@@ -222,8 +274,8 @@ const TabunganDashboard = () => {
                 const isOverBudget = item.budget && item.amount > item.budget
                 return (
                   <div key={index} className='flex flex-col gap-2'>
-                    <div className='flex items-center justify-between'>
-                      <div className='flex items-center gap-2'>
+                    <div className='flex items-center justify-between flex-wrap gap-1'>
+                      <div className='flex items-center gap-2 flex-wrap'>
                         <Typography variant='body1'>{item.category}</Typography>
                         {isOverBudget && <Chip label='Melebihi Budget' color='error' size='small' />}
                       </div>
@@ -236,7 +288,7 @@ const TabunganDashboard = () => {
                         variant='determinate'
                         value={progress}
                         color={isOverBudget ? 'error' : 'warning'}
-                        className='bs-2'
+                        sx={{ height: 8, borderRadius: 1 }}
                       />
                     )}
                   </div>
@@ -249,57 +301,25 @@ const TabunganDashboard = () => {
         </Card>
       </Grid>
 
-      {/* Member Contributions */}
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Card>
-          <CardHeader title='Kontribusi Anggota Keluarga' />
-          <CardContent>
-            <div className='flex flex-col gap-4'>
-              {stats.memberContributions.length > 0 ? (
-                stats.memberContributions.map((member, index) => (
-                  <div key={index} className='flex items-center justify-between'>
-                    <div className='flex items-center gap-3'>
-                      <CustomAvatar src={member.avatar} size={40}>
-                        {member.name.charAt(0)}
-                      </CustomAvatar>
-                      <div>
-                        <Typography variant='body1'>{member.name}</Typography>
-                        <Typography variant='body2' color='text.secondary'>
-                          {member.role}
-                        </Typography>
-                      </div>
-                    </div>
-                    <div className='text-end'>
-                      <Typography variant='body2' color='success.main'>
-                        +{formatCurrency(member.income)}
-                      </Typography>
-                      <Typography variant='body2' color='info.main'>
-                        Tabungan: {formatCurrency(member.savings)}
-                      </Typography>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <Typography color='text.secondary'>Belum ada anggota keluarga</Typography>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </Grid>
-
       {/* Recent Transactions */}
-      <Grid size={{ xs: 12, md: 6 }}>
+      <Grid size={{ xs: 12 }}>
         <Card>
           <CardHeader title='Transaksi Terbaru' />
           <CardContent>
             <div className='flex flex-col gap-4'>
               {stats.recentTransactions.length > 0 ? (
                 stats.recentTransactions.slice(0, 5).map((transaction, index) => (
-                  <div key={index} className='flex items-center justify-between'>
-                    <div className='flex items-center gap-3'>
+                  <div key={index} className='flex items-center justify-between gap-3'>
+                    <div className='flex items-center gap-3 overflow-hidden'>
                       <CustomAvatar
                         color={
-                          transaction.type === 'income' ? 'success' : transaction.type === 'expense' ? 'error' : 'info'
+                          transaction.type === 'income' 
+                            ? 'success' 
+                            : transaction.type === 'expense' 
+                              ? 'error' 
+                              : transaction.type === 'transfer'
+                                ? 'warning'
+                                : 'info'
                         }
                         variant='rounded'
                         size={40}
@@ -311,13 +331,17 @@ const TabunganDashboard = () => {
                               ? 'tabler-arrow-up'
                               : transaction.type === 'expense'
                                 ? 'tabler-arrow-down'
-                                : 'tabler-coin'
+                                : transaction.type === 'transfer'
+                                  ? 'tabler-transfer'
+                                  : 'tabler-coin'
                           }
                         />
                       </CustomAvatar>
-                      <div>
-                        <Typography variant='body1'>{transaction.description || transaction.type}</Typography>
-                        <Typography variant='body2' color='text.secondary'>
+                      <div className='overflow-hidden'>
+                        <Typography variant='body1' className='truncate'>
+                          {transaction.description || transaction.type}
+                        </Typography>
+                        <Typography variant='body2' color='text.secondary' className='truncate'>
                           {new Date(transaction.date).toLocaleDateString('id-ID')}
                           {transaction.familyMember && ` • ${transaction.familyMember.name}`}
                         </Typography>
@@ -330,8 +354,11 @@ const TabunganDashboard = () => {
                           ? 'success.main'
                           : transaction.type === 'expense'
                             ? 'error.main'
-                            : 'info.main'
+                            : transaction.type === 'transfer'
+                              ? 'warning.main'
+                              : 'info.main'
                       }
+                      className='whitespace-nowrap'
                     >
                       {transaction.type === 'income' ? '+' : '-'}
                       {formatCurrency(transaction.amount)}

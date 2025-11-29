@@ -41,6 +41,10 @@ import type { StorageTypeType } from '@/types/apps/tabunganTypes'
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
 import TablePaginationComponent from '@components/TablePaginationComponent'
+import { TableSkeleton } from '@/components/skeletons'
+
+// Utils
+import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -195,30 +199,36 @@ const StorageTypesTable = () => {
         body: JSON.stringify(body)
       })
 
-      if (!response.ok) {
+      if (response.ok) {
+        showSuccessToast(editingItem ? 'Jenis simpan berhasil diupdate!' : 'Jenis simpan berhasil ditambahkan!')
+        handleCloseDialog()
+        fetchData()
+      } else {
         const errorData = await response.json()
-        console.error('Server error:', errorData)
-        alert('Gagal menyimpan: ' + (errorData.error || 'Unknown error'))
-        return
+        showErrorToast(errorData.error || 'Gagal menyimpan data')
       }
-
-      handleCloseDialog()
-      fetchData()
     } catch (error) {
       console.error('Failed to save storage type:', error)
-      alert('Terjadi kesalahan saat menyimpan data')
+      showErrorToast('Terjadi kesalahan saat menyimpan data')
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Yakin ingin menghapus jenis simpan ini?')) {
+    const confirmed = await showDeleteConfirm('Jenis simpan ini')
+    if (confirmed) {
       try {
-        await fetch(`/api/apps/tabungan/storage-types?id=${id}`, {
+        const response = await fetch(`/api/apps/tabungan/storage-types?id=${id}`, {
           method: 'DELETE'
         })
-        fetchData()
+        if (response.ok) {
+          showSuccessToast('Jenis simpan berhasil dihapus!')
+          fetchData()
+        } else {
+          showErrorToast('Gagal menghapus jenis simpan')
+        }
       } catch (error) {
         console.error('Failed to delete storage type:', error)
+        showErrorToast('Terjadi kesalahan')
       }
     }
   }
@@ -327,11 +337,15 @@ const StorageTypesTable = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={columns.length} className='text-center py-10'>
-                    Loading...
-                  </td>
-                </tr>
+                [...Array(5)].map((_, index) => (
+                  <tr key={index}>
+                    {[...Array(columns.length)].map((_, cellIndex) => (
+                      <td key={cellIndex} className='py-3'>
+                        <div className='animate-pulse bg-gray-200 dark:bg-gray-700 h-4 rounded w-3/4'></div>
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ) : table.getRowModel().rows.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length} className='text-center py-10'>

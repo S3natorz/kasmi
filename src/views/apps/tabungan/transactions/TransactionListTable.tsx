@@ -47,8 +47,11 @@ import type {
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 import CustomTextField from '@core/components/mui/TextField'
-import OptionMenu from '@core/components/option-menu'
 import TablePaginationComponent from '@components/TablePaginationComponent'
+import { TableSkeleton } from '@/components/skeletons'
+
+// Utils
+import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -225,28 +228,41 @@ const TransactionListTable = () => {
       }
       const body = editingTransaction ? { ...submitData, id: editingTransaction.id } : submitData
 
-      await fetch(url, {
+      const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
 
-      handleCloseDialog()
-      fetchData()
+      if (response.ok) {
+        showSuccessToast(editingTransaction ? 'Transaksi berhasil diupdate!' : 'Transaksi berhasil ditambahkan!')
+        handleCloseDialog()
+        fetchData()
+      } else {
+        showErrorToast('Gagal menyimpan transaksi')
+      }
     } catch (error) {
       console.error('Failed to save transaction:', error)
+      showErrorToast('Terjadi kesalahan')
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Yakin ingin menghapus transaksi ini?')) {
+    const confirmed = await showDeleteConfirm('Transaksi ini')
+    if (confirmed) {
       try {
-        await fetch(`/api/apps/tabungan/transactions?id=${id}`, {
+        const response = await fetch(`/api/apps/tabungan/transactions?id=${id}`, {
           method: 'DELETE'
         })
-        fetchData()
+        if (response.ok) {
+          showSuccessToast('Transaksi berhasil dihapus!')
+          fetchData()
+        } else {
+          showErrorToast('Gagal menghapus transaksi')
+        }
       } catch (error) {
         console.error('Failed to delete transaction:', error)
+        showErrorToast('Terjadi kesalahan')
       }
     }
   }
@@ -399,24 +415,28 @@ const TransactionListTable = () => {
     getPaginationRowModel: getPaginationRowModel()
   })
 
+  if (loading) {
+    return <TableSkeleton rows={8} columns={6} />
+  }
+
   return (
     <>
       <Card>
         <CardHeader title='Daftar Transaksi' />
         <Divider />
-        <div className='flex flex-wrap justify-between gap-4 p-6'>
-          <div className='flex flex-wrap gap-4'>
+        <div className='flex flex-col sm:flex-row flex-wrap justify-between gap-4 p-4 sm:p-6'>
+          <div className='flex flex-col sm:flex-row flex-wrap gap-4 w-full sm:w-auto'>
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
               placeholder='Cari transaksi...'
-              className='max-sm:is-full'
+              className='w-full sm:w-auto'
             />
             <CustomTextField
               select
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value)}
-              className='min-is-[150px]'
+              className='w-full sm:min-is-[150px]'
               placeholder='Filter Tipe'
             >
               <MenuItem value=''>Semua Tipe</MenuItem>
@@ -571,36 +591,90 @@ const TransactionListTable = () => {
               </CustomTextField>
             </Grid>
             {formData.type === 'savings' && (
-              <Grid size={{ xs: 12 }}>
-                <CustomTextField
-                  select
-                  fullWidth
-                  label='Kategori Tabungan'
-                  value={formData.savingsCategoryId}
-                  onChange={e => setFormData({ ...formData, savingsCategoryId: e.target.value })}
-                >
-                  <MenuItem value=''>Pilih Kategori</MenuItem>
-                  {savingsCategories.map(cat => (
-                    <MenuItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </MenuItem>
-                  ))}
-                </CustomTextField>
-              </Grid>
+              <>
+                <Grid size={{ xs: 12 }}>
+                  <CustomTextField
+                    select
+                    fullWidth
+                    label='Ambil dari Simpanan'
+                    value={formData.fromStorageTypeId}
+                    onChange={e => setFormData({ ...formData, fromStorageTypeId: e.target.value })}
+                  >
+                    <MenuItem value=''>Pilih Sumber Dana</MenuItem>
+                    {storageTypes.map(st => (
+                      <MenuItem key={st.id} value={st.id}>
+                        {st.name} ({formatCurrency(st.balance || 0)})
+                      </MenuItem>
+                    ))}
+                  </CustomTextField>
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <CustomTextField
+                    select
+                    fullWidth
+                    label='Kategori Tabungan'
+                    value={formData.savingsCategoryId}
+                    onChange={e => setFormData({ ...formData, savingsCategoryId: e.target.value })}
+                  >
+                    <MenuItem value=''>Pilih Kategori</MenuItem>
+                    {savingsCategories.map(cat => (
+                      <MenuItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </MenuItem>
+                    ))}
+                  </CustomTextField>
+                </Grid>
+              </>
             )}
             {formData.type === 'expense' && (
+              <>
+                <Grid size={{ xs: 12 }}>
+                  <CustomTextField
+                    select
+                    fullWidth
+                    label='Ambil dari Simpanan'
+                    value={formData.fromStorageTypeId}
+                    onChange={e => setFormData({ ...formData, fromStorageTypeId: e.target.value })}
+                  >
+                    <MenuItem value=''>Pilih Sumber Dana</MenuItem>
+                    {storageTypes.map(st => (
+                      <MenuItem key={st.id} value={st.id}>
+                        {st.name} ({formatCurrency(st.balance || 0)})
+                      </MenuItem>
+                    ))}
+                  </CustomTextField>
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <CustomTextField
+                    select
+                    fullWidth
+                    label='Kategori Pengeluaran'
+                    value={formData.expenseCategoryId}
+                    onChange={e => setFormData({ ...formData, expenseCategoryId: e.target.value })}
+                  >
+                    <MenuItem value=''>Pilih Kategori</MenuItem>
+                    {expenseCategories.map(cat => (
+                      <MenuItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </MenuItem>
+                    ))}
+                  </CustomTextField>
+                </Grid>
+              </>
+            )}
+            {formData.type === 'income' && (
               <Grid size={{ xs: 12 }}>
                 <CustomTextField
                   select
                   fullWidth
-                  label='Kategori Pengeluaran'
-                  value={formData.expenseCategoryId}
-                  onChange={e => setFormData({ ...formData, expenseCategoryId: e.target.value })}
+                  label='Masuk ke Simpanan'
+                  value={formData.toStorageTypeId}
+                  onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
                 >
-                  <MenuItem value=''>Pilih Kategori</MenuItem>
-                  {expenseCategories.map(cat => (
-                    <MenuItem key={cat.id} value={cat.id}>
-                      {cat.name}
+                  <MenuItem value=''>Pilih Tujuan</MenuItem>
+                  {storageTypes.map(st => (
+                    <MenuItem key={st.id} value={st.id}>
+                      {st.name} ({formatCurrency(st.balance || 0)})
                     </MenuItem>
                   ))}
                 </CustomTextField>

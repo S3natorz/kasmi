@@ -39,6 +39,9 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import CustomTextField from '@core/components/mui/TextField'
 import TablePaginationComponent from '@components/TablePaginationComponent'
 
+// Utils
+import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
+
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
@@ -106,28 +109,36 @@ const FamilyMembersTable = () => {
       const method = editingMember ? 'PUT' : 'POST'
       const body = editingMember ? { ...formData, id: editingMember.id } : formData
 
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
 
+      if (!res.ok) throw new Error('Failed to save')
+
       handleCloseDialog()
       fetchData()
+      showSuccessToast(editingMember ? 'Anggota berhasil diperbarui' : 'Anggota berhasil ditambahkan')
     } catch (error) {
       console.error('Failed to save member:', error)
+      showErrorToast('Gagal menyimpan anggota')
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Yakin ingin menghapus anggota ini?')) {
+    const confirmed = await showDeleteConfirm('Yakin ingin menghapus anggota ini?')
+    if (confirmed) {
       try {
-        await fetch(`/api/apps/tabungan/family-members?id=${id}`, {
+        const res = await fetch(`/api/apps/tabungan/family-members?id=${id}`, {
           method: 'DELETE'
         })
+        if (!res.ok) throw new Error('Failed to delete')
         fetchData()
+        showSuccessToast('Anggota berhasil dihapus')
       } catch (error) {
         console.error('Failed to delete member:', error)
+        showErrorToast('Gagal menghapus anggota')
       }
     }
   }
@@ -236,11 +247,23 @@ const FamilyMembersTable = () => {
                 </tr>
               ))}
             </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
+            {loading ? (
+              <tbody>
+                {[...Array(5)].map((_, index) => (
+                  <tr key={index}>
+                    {[...Array(table.getVisibleFlatColumns().length)].map((_, cellIndex) => (
+                      <td key={cellIndex} className='py-3'>
+                        <div className='animate-pulse bg-gray-200 dark:bg-gray-700 h-4 rounded w-3/4'></div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            ) : table.getFilteredRowModel().rows.length === 0 ? (
               <tbody>
                 <tr>
                   <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    {loading ? 'Memuat...' : 'Tidak ada data anggota'}
+                    Tidak ada data anggota
                   </td>
                 </tr>
               </tbody>

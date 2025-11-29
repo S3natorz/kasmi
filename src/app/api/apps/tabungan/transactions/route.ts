@@ -7,11 +7,10 @@ const prisma = new PrismaClient()
 async function updateStorageBalance(storageTypeId: string, amount: number, isAdd: boolean) {
   const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
   if (storage) {
+    const newBalance = isAdd ? storage.balance + amount : storage.balance - amount
     await prisma.storageType.update({
       where: { id: storageTypeId },
-      data: {
-        balance: isAdd ? storage.balance + amount : storage.balance - amount
-      }
+      data: { balance: Math.max(0, newBalance) }
     })
   }
 }
@@ -27,34 +26,21 @@ export async function GET(request: Request) {
 
     const where: any = {}
 
-    if (type) {
-      where.type = type
-    }
-
-    if (familyMemberId) {
-      where.familyMemberId = familyMemberId
-    }
+    if (type) where.type = type
+    if (familyMemberId) where.familyMemberId = familyMemberId
 
     if (startDate || endDate) {
       where.date = {}
-      if (startDate) {
-        where.date.gte = new Date(startDate)
-      }
-      if (endDate) {
-        where.date.lte = new Date(endDate)
-      }
+      if (startDate) where.date.gte = new Date(startDate)
+      if (endDate) where.date.lte = new Date(endDate)
     }
 
     const transactions = await prisma.transaction.findMany({
       where,
       include: {
         familyMember: true,
-        savingsCategory: {
-          include: { storageType: true }
-        },
-        expenseCategory: {
-          include: { storageType: true }
-        },
+        savingsCategory: true,
+        expenseCategory: true,
         fromStorageType: true,
         toStorageType: true
       },
@@ -63,6 +49,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(transactions)
   } catch (error) {
+    console.error('Failed to fetch transactions:', error)
     return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
   }
 }
@@ -73,36 +60,28 @@ export async function POST(request: Request) {
     const body = await request.json()
     const amount = parseFloat(body.amount)
 
-    // Handle transfer type - update balances
-    if (body.type === 'transfer') {
-      if (!body.fromStorageTypeId || !body.toStorageTypeId) {
-        return NextResponse.json({ error: 'Transfer requires source and destination' }, { status: 400 })
+    // ALUR BARU:
+    // 1. Income (Pemasukan) -> langsung masuk ke toStorageType
+    // 2. Expense (Pengeluaran) -> mengambil dari fromStorageType
+    // 3. Savings (Tabungan) -> mengambil dari fromStorageType
+    // 4. Transfer -> dari fromStorageType ke toStorageType
+
+    if (body.type === 'income') {
+      if (body.toStorageTypeId) {
+        await updateStorageBalance(body.toStorageTypeId, amount, true)
       }
-
-      // Decrease from source, increase to destination
-      await updateStorageBalance(body.fromStorageTypeId, amount, false)
-      await updateStorageBalance(body.toStorageTypeId, amount, true)
-    }
-
-    // Handle savings - increase storage balance
-    if (body.type === 'savings' && body.savingsCategoryId) {
-      const category = await prisma.savingsCategory.findUnique({
-        where: { id: body.savingsCategoryId },
-        include: { storageType: true }
-      })
-      if (category?.storageTypeId) {
-        await updateStorageBalance(category.storageTypeId, amount, true)
+    } else if (body.type === 'expense') {
+      if (body.fromStorageTypeId) {
+        await updateStorageBalance(body.fromStorageTypeId, amount, false)
       }
-    }
-
-    // Handle expense - decrease storage balance
-    if (body.type === 'expense' && body.expenseCategoryId) {
-      const category = await prisma.expenseCategory.findUnique({
-        where: { id: body.expenseCategoryId },
-        include: { storageType: true }
-      })
-      if (category?.storageTypeId) {
-        await updateStorageBalance(category.storageTypeId, amount, false)
+    } else if (body.type === 'savings') {
+      if (body.fromStorageTypeId) {
+        await updateStorageBalance(body.fromStorageTypeId, amount, false)
+      }
+    } else if (body.type === 'transfer') {
+      if (body.fromStorageTypeId && body.toStorageTypeId) {
+        await updateStorageBalance(body.fromStorageTypeId, amount, false)
+        await updateStorageBalance(body.toStorageTypeId, amount, true)
       }
     }
 
@@ -120,32 +99,59 @@ export async function POST(request: Request) {
       },
       include: {
         familyMember: true,
-        savingsCategory: {
-          include: { storageType: true }
-        },
-        expenseCategory: {
-          include: { storageType: true }
-        },
+        savingsCategory: true,
+        expenseCategory: true,
         fromStorageType: true,
         toStorageType: true
       }
     })
     return NextResponse.json(transaction, { status: 201 })
   } catch (error) {
-    console.error(error)
+    console.error('Failed to create transaction:', error)
     return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
   }
 }
 
-// PUT - Update transaction
+// PUT - Update transaction (reverse old, apply new)
 export async function PUT(request: Request) {
   try {
     const body = await request.json()
+    const newAmount = parseFloat(body.amount)
+
+    // Get old transaction to reverse its effect
+    const oldTx = await prisma.transaction.findUnique({ where: { id: body.id } })
+
+    if (oldTx) {
+      // Reverse old transaction effect
+      if (oldTx.type === 'income' && oldTx.toStorageTypeId) {
+        await updateStorageBalance(oldTx.toStorageTypeId, oldTx.amount, false)
+      } else if (oldTx.type === 'expense' && oldTx.fromStorageTypeId) {
+        await updateStorageBalance(oldTx.fromStorageTypeId, oldTx.amount, true)
+      } else if (oldTx.type === 'savings' && oldTx.fromStorageTypeId) {
+        await updateStorageBalance(oldTx.fromStorageTypeId, oldTx.amount, true)
+      } else if (oldTx.type === 'transfer') {
+        if (oldTx.fromStorageTypeId) await updateStorageBalance(oldTx.fromStorageTypeId, oldTx.amount, true)
+        if (oldTx.toStorageTypeId) await updateStorageBalance(oldTx.toStorageTypeId, oldTx.amount, false)
+      }
+    }
+
+    // Apply new transaction effect
+    if (body.type === 'income' && body.toStorageTypeId) {
+      await updateStorageBalance(body.toStorageTypeId, newAmount, true)
+    } else if (body.type === 'expense' && body.fromStorageTypeId) {
+      await updateStorageBalance(body.fromStorageTypeId, newAmount, false)
+    } else if (body.type === 'savings' && body.fromStorageTypeId) {
+      await updateStorageBalance(body.fromStorageTypeId, newAmount, false)
+    } else if (body.type === 'transfer') {
+      if (body.fromStorageTypeId) await updateStorageBalance(body.fromStorageTypeId, newAmount, false)
+      if (body.toStorageTypeId) await updateStorageBalance(body.toStorageTypeId, newAmount, true)
+    }
+
     const transaction = await prisma.transaction.update({
       where: { id: body.id },
       data: {
         type: body.type,
-        amount: parseFloat(body.amount),
+        amount: newAmount,
         description: body.description || null,
         date: body.date ? new Date(body.date) : undefined,
         familyMemberId: body.familyMemberId && body.familyMemberId !== '' ? body.familyMemberId : null,
@@ -156,23 +162,20 @@ export async function PUT(request: Request) {
       },
       include: {
         familyMember: true,
-        savingsCategory: {
-          include: { storageType: true }
-        },
-        expenseCategory: {
-          include: { storageType: true }
-        },
+        savingsCategory: true,
+        expenseCategory: true,
         fromStorageType: true,
         toStorageType: true
       }
     })
     return NextResponse.json(transaction)
   } catch (error) {
+    console.error('Failed to update transaction:', error)
     return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 })
   }
 }
 
-// DELETE - Delete transaction
+// DELETE - Delete transaction and reverse balance
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -182,11 +185,27 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
-    await prisma.transaction.delete({
-      where: { id }
-    })
+    // Get transaction to reverse its effect
+    const tx = await prisma.transaction.findUnique({ where: { id } })
+
+    if (tx) {
+      // Reverse transaction effect before deleting
+      if (tx.type === 'income' && tx.toStorageTypeId) {
+        await updateStorageBalance(tx.toStorageTypeId, tx.amount, false)
+      } else if (tx.type === 'expense' && tx.fromStorageTypeId) {
+        await updateStorageBalance(tx.fromStorageTypeId, tx.amount, true)
+      } else if (tx.type === 'savings' && tx.fromStorageTypeId) {
+        await updateStorageBalance(tx.fromStorageTypeId, tx.amount, true)
+      } else if (tx.type === 'transfer') {
+        if (tx.fromStorageTypeId) await updateStorageBalance(tx.fromStorageTypeId, tx.amount, true)
+        if (tx.toStorageTypeId) await updateStorageBalance(tx.toStorageTypeId, tx.amount, false)
+      }
+    }
+
+    await prisma.transaction.delete({ where: { id } })
     return NextResponse.json({ message: 'Transaction deleted successfully' })
   } catch (error) {
+    console.error('Failed to delete transaction:', error)
     return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 })
   }
 }

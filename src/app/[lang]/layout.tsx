@@ -30,7 +30,20 @@ import '@assets/iconify-icons/generated-icons.css'
 
 export const metadata = {
   title: 'Kasmi - Aplikasi Tabungan Keluarga',
-  description: 'Kasmi - Aplikasi Tabungan Keluarga untuk mengelola keuangan keluarga dengan mudah dan efisien.'
+  description: 'Kasmi - Aplikasi Tabungan Keluarga untuk mengelola keuangan keluarga dengan mudah dan efisien.',
+  manifest: '/manifest.json',
+  themeColor: '#7367f0',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Tabungan Keluarga'
+  }
 }
 
 const RootLayout = async (props: ChildrenType & { params: Promise<{ lang: string }> }) => {

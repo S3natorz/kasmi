@@ -1,0 +1,27 @@
+{
+  "name": "Tabungan Keluarga",
+  "short_name": "TabunganKeluarga",
+  "description": "Aplikasi pencatatan tabungan dan keuangan keluarga",
+  "start_url": "/en/apps/tabungan/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7367f0",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/logos/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logos/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
