@@ -3,9 +3,6 @@
 // React Imports
 import { useEffect, useState } from 'react'
 
-// Next Imports
-import { useRouter } from 'next/navigation'
-
 // MUI Imports
 import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
@@ -23,6 +20,7 @@ import Tooltip from '@mui/material/Tooltip'
 import CustomAvatar from '@core/components/mui/Avatar'
 import CustomTextField from '@core/components/mui/TextField'
 import { DashboardStatsSkeleton } from '@/components/skeletons'
+import AddTransactionDialog from '@/components/dialogs/AddTransactionDialog'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -60,9 +58,9 @@ const formatCurrency = (amount: number) => {
 }
 
 const TabunganDashboard = () => {
-  const router = useRouter()
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [openAddDialog, setOpenAddDialog] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -420,7 +418,7 @@ const TabunganDashboard = () => {
         <Fab
           color="primary"
           aria-label="tambah transaksi"
-          onClick={() => router.push('/en/apps/tabungan/transactions')}
+          onClick={() => setOpenAddDialog(true)}
           sx={{
             position: 'fixed',
             bottom: { xs: 16, sm: 24 },
@@ -437,6 +435,13 @@ const TabunganDashboard = () => {
           <i className='tabler-plus text-xl' />
         </Fab>
       </Tooltip>
+
+      {/* Add Transaction Dialog */}
+      <AddTransactionDialog 
+        open={openAddDialog} 
+        onClose={() => setOpenAddDialog(false)}
+        onSuccess={fetchStats}
+      />
     </Grid>
   )
 }
