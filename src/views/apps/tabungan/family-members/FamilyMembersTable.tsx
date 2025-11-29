@@ -175,8 +175,10 @@ const FamilyMembersTable = () => {
   const table = useReactTable({
     data,
     columns,
+    filterFns: { fuzzy: fuzzyFilter },
     state: { globalFilter },
     initialState: { pagination: { pageSize: 10 } },
+    globalFilterFn: fuzzyFilter,
     getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
