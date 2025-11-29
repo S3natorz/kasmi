@@ -422,12 +422,13 @@ const TabunganDashboard = () => {
           onClick={() => setOpenAddDialog(true)}
           sx={{
             position: 'fixed',
-            bottom: { xs: 16, sm: 24 },
-            right: { xs: 70, sm: 80 },
+            bottom: { xs: 20, sm: 28 },
+            right: { xs: 65, sm: 75 },
             zIndex: 1000,
             boxShadow: 3,
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
+            minHeight: 44,
             '&:hover': {
               transform: 'scale(1.1)',
               boxShadow: 6
