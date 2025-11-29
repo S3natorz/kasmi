@@ -309,26 +309,50 @@ const StorageTypesTable = () => {
         <CardHeader
           title='Jenis Simpan'
           action={
-            <div className='flex items-center gap-4'>
+            <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto'>
               <CustomTextField
                 placeholder='Cari...'
                 value={globalFilter ?? ''}
                 onChange={e => setGlobalFilter(e.target.value)}
+                size='small'
+                className='w-full sm:w-auto'
               />
-              <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => handleOpenDialog()}>
+              <Button 
+                variant='contained' 
+                startIcon={<i className='tabler-plus' />} 
+                onClick={() => handleOpenDialog()}
+                size='small'
+                className='whitespace-nowrap'
+              >
                 Tambah
               </Button>
             </div>
           }
+          sx={{
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            '& .MuiCardHeader-action': {
+              width: { xs: '100%', sm: 'auto' },
+              mt: { xs: 2, sm: 0 }
+            }
+          }}
         />
         <Divider />
         <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
+          <table className={tableStyles.table} style={{ minWidth: '700px' }}>
             <thead>
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
+                  {headerGroup.headers.map((header, index) => (
+                    <th 
+                      key={header.id}
+                      style={index === 0 ? {
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 1,
+                        backgroundColor: 'var(--mui-palette-background-paper)'
+                      } : undefined}
+                    >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
@@ -340,7 +364,16 @@ const StorageTypesTable = () => {
                 [...Array(5)].map((_, index) => (
                   <tr key={index}>
                     {[...Array(columns.length)].map((_, cellIndex) => (
-                      <td key={cellIndex} className='py-3'>
+                      <td 
+                        key={cellIndex} 
+                        className='py-3'
+                        style={cellIndex === 0 ? {
+                          position: 'sticky',
+                          left: 0,
+                          zIndex: 1,
+                          backgroundColor: 'var(--mui-palette-background-paper)'
+                        } : undefined}
+                      >
                         <div className='animate-pulse bg-gray-200 dark:bg-gray-700 h-4 rounded w-3/4'></div>
                       </td>
                     ))}
@@ -355,8 +388,18 @@ const StorageTypesTable = () => {
               ) : (
                 table.getRowModel().rows.map(row => (
                   <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                    {row.getVisibleCells().map((cell, index) => (
+                      <td 
+                        key={cell.id}
+                        style={index === 0 ? {
+                          position: 'sticky',
+                          left: 0,
+                          zIndex: 1,
+                          backgroundColor: 'var(--mui-palette-background-paper)'
+                        } : undefined}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
                     ))}
                   </tr>
                 ))
