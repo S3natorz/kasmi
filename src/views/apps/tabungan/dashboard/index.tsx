@@ -155,15 +155,30 @@ const TabunganDashboard = () => {
       {statsCards.map((stat, index) => (
         <Grid key={index} size={{ xs: 6, md: 3 }}>
           <Card>
-            <CardContent className='flex items-center gap-3'>
-              <CustomAvatar color={stat.color} variant='rounded' size={48} skin='light'>
+            <CardContent className='flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4'>
+              <CustomAvatar color={stat.color} variant='rounded' size={48} skin='light' className='shrink-0'>
                 <i className={`${stat.icon} text-xl`} />
               </CustomAvatar>
-              <div className='flex flex-col overflow-hidden'>
-                <Typography variant='h6' className='truncate'>
+              <div className='flex flex-col min-w-0 w-full'>
+                <Typography 
+                  variant='h6' 
+                  className='font-semibold'
+                  sx={{ 
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    lineHeight: 1.2
+                  }}
+                >
                   {stat.title === 'Total Transaksi' ? stat.value : formatCurrency(stat.value)}
                 </Typography>
-                <Typography variant='body2' color='text.secondary' className='truncate'>
+                <Typography 
+                  variant='body2' 
+                  color='text.secondary'
+                  sx={{ 
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                    lineHeight: 1.3,
+                    mt: 0.5
+                  }}
+                >
                   {stat.title}
                 </Typography>
               </div>
@@ -180,24 +195,27 @@ const TabunganDashboard = () => {
             subheader={`Total: ${formatCurrency(totalBalance)}`}
           />
           <CardContent>
-            <Grid container spacing={4}>
+            <Grid container spacing={3}>
               {stats.storageBalances.length > 0 ? (
                 stats.storageBalances.map((storage, index) => (
                   <Grid key={index} size={{ xs: 6, sm: 4, md: 3 }}>
                     <Box 
                       sx={{ 
-                        p: 3, 
+                        p: { xs: 2, sm: 3 }, 
                         borderRadius: 2, 
                         bgcolor: 'action.hover',
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: 2
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        alignItems: { xs: 'flex-start', sm: 'center' },
+                        gap: { xs: 1.5, sm: 2 },
+                        height: '100%'
                       }}
                     >
                       <CustomAvatar 
                         variant='rounded' 
-                        size={44} 
+                        size={40} 
                         skin='light'
+                        className='shrink-0'
                         sx={{ bgcolor: storage.color ? `${storage.color}20` : undefined }}
                       >
                         {storage.icon ? (
@@ -206,11 +224,29 @@ const TabunganDashboard = () => {
                           <i className='tabler-wallet' />
                         )}
                       </CustomAvatar>
-                      <div className='flex flex-col overflow-hidden'>
-                        <Typography variant='body2' color='text.secondary' className='truncate'>
+                      <div className='flex flex-col min-w-0 w-full'>
+                        <Typography 
+                          variant='body2' 
+                          color='text.secondary' 
+                          sx={{ 
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                            lineHeight: 1.2,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
                           {storage.name}
                         </Typography>
-                        <Typography variant='h6' className='truncate'>
+                        <Typography 
+                          variant='h6'
+                          sx={{ 
+                            fontSize: { xs: '0.85rem', sm: '1rem' },
+                            fontWeight: 600,
+                            lineHeight: 1.3,
+                            mt: 0.25
+                          }}
+                        >
                           {formatCurrency(storage.balance || 0)}
                         </Typography>
                       </div>
