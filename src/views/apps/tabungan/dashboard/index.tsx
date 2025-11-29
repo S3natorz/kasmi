@@ -164,20 +164,20 @@ const TabunganDashboard = () => {
                 <i className={`${stat.icon} text-xl`} />
               </CustomAvatar>
               <div className='flex flex-col min-w-0 w-full'>
-                <Typography 
-                  variant='h6' 
+                <Typography
+                  variant='h6'
                   className='font-semibold'
-                  sx={{ 
+                  sx={{
                     fontSize: { xs: '0.875rem', sm: '1rem' },
                     lineHeight: 1.2
                   }}
                 >
                   {stat.title === 'Total Transaksi' ? stat.value : formatCurrency(stat.value)}
                 </Typography>
-                <Typography 
-                  variant='body2' 
+                <Typography
+                  variant='body2'
                   color='text.secondary'
-                  sx={{ 
+                  sx={{
                     fontSize: { xs: '0.7rem', sm: '0.75rem' },
                     lineHeight: 1.3,
                     mt: 0.5
@@ -194,19 +194,16 @@ const TabunganDashboard = () => {
       {/* Storage Balances - NEW: List saldo per Jenis Simpan */}
       <Grid size={{ xs: 12 }}>
         <Card>
-          <CardHeader 
-            title='Saldo Simpanan' 
-            subheader={`Total: ${formatCurrency(totalBalance)}`}
-          />
+          <CardHeader title='Saldo Simpanan' subheader={`Total: ${formatCurrency(totalBalance)}`} />
           <CardContent>
             <Grid container spacing={3}>
               {stats.storageBalances.length > 0 ? (
                 stats.storageBalances.map((storage, index) => (
                   <Grid key={index} size={{ xs: 6, sm: 4, md: 3 }}>
-                    <Box 
-                      sx={{ 
-                        p: { xs: 2, sm: 3 }, 
-                        borderRadius: 2, 
+                    <Box
+                      sx={{
+                        p: { xs: 2, sm: 3 },
+                        borderRadius: 2,
                         bgcolor: 'action.hover',
                         display: 'flex',
                         flexDirection: { xs: 'column', sm: 'row' },
@@ -215,9 +212,9 @@ const TabunganDashboard = () => {
                         height: '100%'
                       }}
                     >
-                      <CustomAvatar 
-                        variant='rounded' 
-                        size={40} 
+                      <CustomAvatar
+                        variant='rounded'
+                        size={40}
                         skin='light'
                         className='shrink-0'
                         sx={{ bgcolor: storage.color ? `${storage.color}20` : undefined }}
@@ -229,10 +226,10 @@ const TabunganDashboard = () => {
                         )}
                       </CustomAvatar>
                       <div className='flex flex-col min-w-0 w-full'>
-                        <Typography 
-                          variant='body2' 
-                          color='text.secondary' 
-                          sx={{ 
+                        <Typography
+                          variant='body2'
+                          color='text.secondary'
+                          sx={{
                             fontSize: { xs: '0.7rem', sm: '0.75rem' },
                             lineHeight: 1.2,
                             whiteSpace: 'nowrap',
@@ -242,9 +239,9 @@ const TabunganDashboard = () => {
                         >
                           {storage.name}
                         </Typography>
-                        <Typography 
+                        <Typography
                           variant='h6'
-                          sx={{ 
+                          sx={{
                             fontSize: { xs: '0.85rem', sm: '1rem' },
                             fontWeight: 600,
                             lineHeight: 1.3,
@@ -353,10 +350,10 @@ const TabunganDashboard = () => {
                     <div className='flex items-center gap-3 overflow-hidden'>
                       <CustomAvatar
                         color={
-                          transaction.type === 'income' 
-                            ? 'success' 
-                            : transaction.type === 'expense' 
-                              ? 'error' 
+                          transaction.type === 'income'
+                            ? 'success'
+                            : transaction.type === 'expense'
+                              ? 'error'
                               : transaction.type === 'transfer'
                                 ? 'warning'
                                 : 'info'
@@ -414,16 +411,16 @@ const TabunganDashboard = () => {
       </Grid>
 
       {/* Floating Action Button - Tambah Transaksi */}
-      <Tooltip title="Tambah Transaksi" placement="left">
+      <Tooltip title='Tambah Transaksi' placement='left'>
         <Fab
-          color="primary"
-          size="small"
-          aria-label="tambah transaksi"
+          color='error'
+          size='small'
+          aria-label='tambah transaksi'
           onClick={() => setOpenAddDialog(true)}
           sx={{
             position: 'fixed',
-            bottom: { xs: 20, sm: 28 },
-            right: { xs: 65, sm: 75 },
+            bottom: { xs: 5, sm: 28 },
+            right: { xs: 40, sm: 75 },
             zIndex: 1000,
             boxShadow: 3,
             width: 44,
@@ -441,11 +438,7 @@ const TabunganDashboard = () => {
       </Tooltip>
 
       {/* Add Transaction Dialog */}
-      <AddTransactionDialog 
-        open={openAddDialog} 
-        onClose={() => setOpenAddDialog(false)}
-        onSuccess={fetchStats}
-      />
+      <AddTransactionDialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} onSuccess={fetchStats} />
     </Grid>
   )
 }
