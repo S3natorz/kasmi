@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#282A42"/>
+  
+  <!-- Outer Hexagon -->
+  <path d="M256 80L416 168V344L256 432L96 344V168L256 80Z" stroke="#7367F0" stroke-width="16" fill="none" stroke-linejoin="round"/>
+  
+  <!-- Inner Diamond -->
+  <path d="M256 176L320 256L256 336L192 256L256 176Z" stroke="#7367F0" stroke-width="12" fill="none" stroke-linejoin="round"/>
+  
+  <!-- Center Dot -->
+  <circle cx="256" cy="256" r="16" fill="#7367F0"/>
+</svg>
