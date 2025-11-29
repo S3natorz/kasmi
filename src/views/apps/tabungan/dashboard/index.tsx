@@ -414,17 +414,20 @@ const TabunganDashboard = () => {
       </Grid>
 
       {/* Floating Action Button - Tambah Transaksi */}
-      <Tooltip title="Tambah Transaksi" placement="top">
+      <Tooltip title="Tambah Transaksi" placement="left">
         <Fab
           color="primary"
+          size="medium"
           aria-label="tambah transaksi"
           onClick={() => setOpenAddDialog(true)}
           sx={{
             position: 'fixed',
-            bottom: { xs: 16, sm: 24 },
+            bottom: { xs: 80, sm: 90 },
             right: { xs: 16, sm: 24 },
             zIndex: 1000,
             boxShadow: 3,
+            width: 48,
+            height: 48,
             '&:hover': {
               transform: 'scale(1.1)',
               boxShadow: 6
@@ -432,7 +435,7 @@ const TabunganDashboard = () => {
             transition: 'all 0.2s ease-in-out'
           }}
         >
-          <i className='tabler-plus text-xl' />
+          <i className='tabler-plus text-lg' />
         </Fab>
       </Tooltip>
 
