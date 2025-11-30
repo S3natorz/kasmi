@@ -21,6 +21,7 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import CustomTextField from '@core/components/mui/TextField'
 import { DashboardStatsSkeleton } from '@/components/skeletons'
 import AddTransactionDialog from '@/components/dialogs/AddTransactionDialog'
+import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -61,6 +62,8 @@ const TabunganDashboard = () => {
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [openAddDialog, setOpenAddDialog] = useState(false)
+  const [openStorageDialog, setOpenStorageDialog] = useState(false)
+  const [selectedStorage, setSelectedStorage] = useState<StorageTypeType | null>(null)
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -268,13 +271,17 @@ const TabunganDashboard = () => {
 
             {/* Storage Items */}
             <Typography sx={{ color: 'rgba(255,255,255,0.8)', mb: 2, fontWeight: 600, fontSize: '0.875rem' }}>
-              Rincian Saldo
+              Rincian Saldo (klik untuk detail)
             </Typography>
             <Grid container spacing={2}>
               {stats.storageBalances.length > 0 ? (
                 stats.storageBalances.map((storage, index) => (
                   <Grid key={index} size={{ xs: 6, sm: 4, md: 3 }}>
                     <Box
+                      onClick={() => {
+                        setSelectedStorage(storage)
+                        setOpenStorageDialog(true)
+                      }}
                       sx={{
                         p: 2,
                         borderRadius: 2,
@@ -283,10 +290,14 @@ const TabunganDashboard = () => {
                         flexDirection: 'column',
                         gap: 1,
                         height: '100%',
+                        cursor: 'pointer',
                         transition: 'all 0.2s ease',
                         '&:hover': {
                           bgcolor: 'rgba(255,255,255,0.25)',
                           transform: 'translateY(-2px)'
+                        },
+                        '&:active': {
+                          transform: 'translateY(0)'
                         }
                       }}
                     >
@@ -529,6 +540,16 @@ const TabunganDashboard = () => {
 
       {/* Add Transaction Dialog */}
       <AddTransactionDialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} onSuccess={fetchStats} />
+
+      {/* Storage Transactions Dialog */}
+      <StorageTransactionsDialog
+        open={openStorageDialog}
+        onClose={() => {
+          setOpenStorageDialog(false)
+          setSelectedStorage(null)
+        }}
+        storage={selectedStorage}
+      />
     </Grid>
   )
 }

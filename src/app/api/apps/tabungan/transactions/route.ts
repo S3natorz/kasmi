@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     const familyMemberId = searchParams.get('familyMemberId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const storageTypeId = searchParams.get('storageTypeId')
 
     const where: any = {}
 
@@ -31,6 +32,14 @@ export async function GET(request: Request) {
       where.date = {}
       if (startDate) where.date.gte = new Date(startDate)
       if (endDate) where.date.lte = new Date(endDate)
+    }
+
+    // Filter by storageTypeId (either from or to)
+    if (storageTypeId) {
+      where.OR = [
+        { fromStorageTypeId: storageTypeId },
+        { toStorageTypeId: storageTypeId }
+      ]
     }
 
     const transactions = await prisma.transaction.findMany({
