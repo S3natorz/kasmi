@@ -191,74 +191,164 @@ const TabunganDashboard = () => {
         </Grid>
       ))}
 
-      {/* Storage Balances - NEW: List saldo per Jenis Simpan */}
+      {/* Storage Balances - Total Saldo Simpanan */}
       <Grid size={{ xs: 12 }}>
-        <Card>
-          <CardHeader title='Saldo Simpanan' subheader={`Total: ${formatCurrency(totalBalance)}`} />
-          <CardContent>
-            <Grid container spacing={3}>
+        <Card
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '300px',
+              height: '300px',
+              background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+              transform: 'translate(30%, -30%)'
+            }
+          }}
+        >
+          <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+            {/* Total Balance Header */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                justifyContent: 'space-between',
+                mb: 3,
+                pb: 3,
+                borderBottom: '1px solid rgba(255,255,255,0.2)'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: { xs: 2, sm: 0 } }}>
+                <Box
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <i className='tabler-wallet text-2xl' style={{ color: 'white' }} />
+                </Box>
+                <Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', fontWeight: 500 }}>
+                    Total Saldo Simpanan
+                  </Typography>
+                  <Typography
+                    variant='h4'
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: { xs: '1.5rem', sm: '2rem' },
+                      letterSpacing: '-0.5px'
+                    }}
+                  >
+                    {formatCurrency(totalBalance)}
+                  </Typography>
+                </Box>
+              </Box>
+              <Chip
+                icon={<i className='tabler-trending-up' style={{ color: 'white', fontSize: '1rem' }} />}
+                label={`${stats.storageBalances.length} Jenis Simpanan`}
+                sx={{
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  fontWeight: 500,
+                  '& .MuiChip-icon': { color: 'white' }
+                }}
+              />
+            </Box>
+
+            {/* Storage Items */}
+            <Typography sx={{ color: 'rgba(255,255,255,0.8)', mb: 2, fontWeight: 600, fontSize: '0.875rem' }}>
+              Rincian Saldo
+            </Typography>
+            <Grid container spacing={2}>
               {stats.storageBalances.length > 0 ? (
                 stats.storageBalances.map((storage, index) => (
                   <Grid key={index} size={{ xs: 6, sm: 4, md: 3 }}>
                     <Box
                       sx={{
-                        p: { xs: 2, sm: 3 },
+                        p: 2,
                         borderRadius: 2,
-                        bgcolor: 'action.hover',
+                        bgcolor: 'rgba(255,255,255,0.15)',
                         display: 'flex',
-                        flexDirection: { xs: 'column', sm: 'row' },
-                        alignItems: { xs: 'flex-start', sm: 'center' },
-                        gap: { xs: 1.5, sm: 2 },
-                        height: '100%'
+                        flexDirection: 'column',
+                        gap: 1,
+                        height: '100%',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: 'rgba(255,255,255,0.25)',
+                          transform: 'translateY(-2px)'
+                        }
                       }}
                     >
-                      <CustomAvatar
-                        variant='rounded'
-                        size={40}
-                        skin='light'
-                        className='shrink-0'
-                        sx={{ bgcolor: storage.color ? `${storage.color}20` : undefined }}
-                      >
-                        {storage.icon ? (
-                          <i className={storage.icon} style={{ color: storage.color || undefined }} />
-                        ) : (
-                          <i className='tabler-wallet' />
-                        )}
-                      </CustomAvatar>
-                      <div className='flex flex-col min-w-0 w-full'>
-                        <Typography
-                          variant='body2'
-                          color='text.secondary'
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box
                           sx={{
-                            fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                            lineHeight: 1.2,
+                            width: 36,
+                            height: 36,
+                            borderRadius: 1.5,
+                            bgcolor: storage.color || 'rgba(255,255,255,0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          {storage.icon ? (
+                            <i className={storage.icon} style={{ color: 'white', fontSize: '1.1rem' }} />
+                          ) : (
+                            <i className='tabler-wallet' style={{ color: 'white', fontSize: '1.1rem' }} />
+                          )}
+                        </Box>
+                        <Typography
+                          sx={{
+                            color: 'rgba(255,255,255,0.9)',
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
-                            textOverflow: 'ellipsis'
+                            textOverflow: 'ellipsis',
+                            flex: 1
                           }}
                         >
                           {storage.name}
                         </Typography>
-                        <Typography
-                          variant='h6'
-                          sx={{
-                            fontSize: { xs: '0.85rem', sm: '1rem' },
-                            fontWeight: 600,
-                            lineHeight: 1.3,
-                            mt: 0.25
-                          }}
-                        >
-                          {formatCurrency(storage.balance || 0)}
-                        </Typography>
-                      </div>
+                      </Box>
+                      <Typography
+                        sx={{
+                          fontSize: { xs: '0.95rem', sm: '1.1rem' },
+                          fontWeight: 700,
+                          color: 'white'
+                        }}
+                      >
+                        {formatCurrency(storage.balance || 0)}
+                      </Typography>
                     </Box>
                   </Grid>
                 ))
               ) : (
                 <Grid size={{ xs: 12 }}>
-                  <Typography color='text.secondary' textAlign='center'>
-                    Belum ada jenis simpanan. Tambahkan di menu Jenis Simpan.
-                  </Typography>
+                  <Box
+                    sx={{
+                      p: 3,
+                      borderRadius: 2,
+                      bgcolor: 'rgba(255,255,255,0.1)',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <i className='tabler-wallet-off text-3xl' style={{ color: 'rgba(255,255,255,0.5)' }} />
+                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', mt: 1 }}>
+                      Belum ada jenis simpanan. Tambahkan di menu Jenis Simpan.
+                    </Typography>
+                  </Box>
                 </Grid>
               )}
             </Grid>
