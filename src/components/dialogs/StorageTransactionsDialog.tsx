@@ -94,9 +94,8 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
   if (!storage) return null
 
   // Calculate display value (gold or regular)
-  const displayValue = storage.isGold && storage.goldWeight && goldPrice > 0
-    ? storage.goldWeight * goldPrice
-    : storage.balance || 0
+  const displayValue =
+    storage.isGold && storage.goldWeight && goldPrice > 0 ? storage.goldWeight * goldPrice : storage.balance || 0
 
   // Calculate stats for this storage
   const totalIn = transactions
@@ -104,7 +103,9 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
     .reduce((sum, t) => sum + t.amount, 0)
 
   const totalOut = transactions
-    .filter(t => t.type === 'expense' || t.type === 'savings' || (t.type === 'transfer' && t.fromStorageTypeId === storage.id))
+    .filter(
+      t => t.type === 'expense' || t.type === 'savings' || (t.type === 'transfer' && t.fromStorageTypeId === storage.id)
+    )
     .reduce((sum, t) => sum + t.amount, 0)
 
   return (
@@ -124,7 +125,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
       {/* Header with gradient */}
       <Box
         sx={{
-          background: storage.isGold 
+          background: storage.isGold
             ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
             : `linear-gradient(135deg, ${storage.color || '#667eea'} 0%, ${storage.color ? `${storage.color}dd` : '#764ba2'} 100%)`,
           color: storage.isGold ? '#000' : 'white',
@@ -157,16 +158,24 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 }}
               >
                 {storage.icon ? (
-                  <i className={storage.icon} style={{ color: storage.isGold ? '#000' : 'white', fontSize: '1.5rem' }} />
+                  <i
+                    className={storage.icon}
+                    style={{ color: storage.isGold ? '#000' : 'white', fontSize: '1.5rem' }}
+                  />
                 ) : (
-                  <i className='tabler-wallet' style={{ color: storage.isGold ? '#000' : 'white', fontSize: '1.5rem' }} />
+                  <i
+                    className='tabler-wallet'
+                    style={{ color: storage.isGold ? '#000' : 'white', fontSize: '1.5rem' }}
+                  />
                 )}
               </Box>
               <Box>
                 <Typography variant='h6' sx={{ fontWeight: 600, color: storage.isGold ? '#000' : 'white' }}>
                   {storage.name}
                 </Typography>
-                <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
+                <Typography
+                  sx={{ color: storage.isGold ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}
+                >
                   {storage.isGold ? 'Simpanan Emas' : 'Riwayat Transaksi'}
                 </Typography>
               </Box>
@@ -193,16 +202,12 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 >
                   {storage.goldWeight}
                 </Typography>
-                <Typography sx={{ fontWeight: 600, color: 'rgba(0,0,0,0.7)', fontSize: '1.2rem' }}>
-                  gram
-                </Typography>
+                <Typography sx={{ fontWeight: 600, color: 'rgba(0,0,0,0.7)', fontSize: '1.2rem' }}>gram</Typography>
               </Box>
-              <Typography sx={{ color: 'rgba(0,0,0,0.6)', fontSize: '0.85rem' }}>
-                Berat Emas
-              </Typography>
+              <Typography sx={{ color: 'rgba(0,0,0,0.6)', fontSize: '0.85rem' }}>Berat Emas</Typography>
             </Box>
           )}
-          
+
           <Typography
             variant='h4'
             sx={{
@@ -214,7 +219,9 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
           >
             {formatCurrency(displayValue)}
           </Typography>
-          <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem', mb: 2 }}>
+          <Typography
+            sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem', mb: 2 }}
+          >
             {storage.isGold ? `Nilai Saat Ini @${formatCurrency(goldPrice)}/gram` : 'Saldo Saat Ini'}
           </Typography>
 
@@ -229,7 +236,9 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 textAlign: 'center'
               }}
             >
-              <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
+              <Typography
+                sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}
+              >
                 {storage.isGold ? 'Beli' : 'Masuk'}
               </Typography>
               <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
@@ -245,7 +254,9 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 textAlign: 'center'
               }}
             >
-              <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
+              <Typography
+                sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}
+              >
                 {storage.isGold ? 'Jual' : 'Keluar'}
               </Typography>
               <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
@@ -261,7 +272,11 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 textAlign: 'center'
               }}
             >
-              <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Transaksi</Typography>
+              <Typography
+                sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}
+              >
+                Transaksi
+              </Typography>
               <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {transactions.length}
               </Typography>
@@ -301,12 +316,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                       px: 1
                     }}
                   >
-                    <CustomAvatar
-                      color={config.color}
-                      variant='rounded'
-                      size={44}
-                      skin='light'
-                    >
+                    <CustomAvatar color={config.color} variant='rounded' size={44} skin='light'>
                       <i className={config.icon} />
                     </CustomAvatar>
 
@@ -331,11 +341,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                           sx={{ height: 20, fontSize: '0.7rem' }}
                         />
                       </Box>
-                      <Typography
-                        variant='body2'
-                        color='text.secondary'
-                        sx={{ fontSize: '0.8rem', mt: 0.5 }}
-                      >
+                      <Typography variant='body2' color='text.secondary' sx={{ fontSize: '0.8rem', mt: 0.5 }}>
                         {new Date(transaction.date).toLocaleDateString('id-ID', {
                           weekday: 'short',
                           day: 'numeric',

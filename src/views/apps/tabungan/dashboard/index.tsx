@@ -120,7 +120,7 @@ const TabunganDashboard = () => {
   const [openAddDialog, setOpenAddDialog] = useState(false)
   const [openStorageDialog, setOpenStorageDialog] = useState(false)
   const [selectedStorage, setSelectedStorage] = useState<StorageTypeType | null>(null)
-  
+
   // Gold price state
   const [goldPrice, setGoldPrice] = useState<number>(0)
 
@@ -261,11 +261,11 @@ const TabunganDashboard = () => {
   // Calculate total balance from all storage types (including gold value)
   const totalBalance = stats.storageBalances.reduce((sum, s) => {
     if (s.isGold && s.goldWeight) {
-      return sum + (s.goldWeight * goldPrice)
+      return sum + s.goldWeight * goldPrice
     }
     return sum + (s.balance || 0)
   }, 0)
-  
+
   // Calculate total gold weight
   const totalGoldWeight = stats.storageBalances
     .filter(s => s.isGold && s.goldWeight)
@@ -540,10 +540,9 @@ const TabunganDashboard = () => {
             <Grid container spacing={2}>
               {stats.storageBalances.length > 0 ? (
                 stats.storageBalances.map((storage, index) => {
-                  const displayValue = storage.isGold && storage.goldWeight 
-                    ? storage.goldWeight * goldPrice 
-                    : storage.balance || 0
-                  
+                  const displayValue =
+                    storage.isGold && storage.goldWeight ? storage.goldWeight * goldPrice : storage.balance || 0
+
                   return (
                     <Grid key={index} size={{ xs: 6, sm: 4, md: 3 }}>
                       <Box
@@ -577,14 +576,17 @@ const TabunganDashboard = () => {
                               width: 36,
                               height: 36,
                               borderRadius: 1.5,
-                              bgcolor: storage.isGold ? '#FFD700' : (storage.color || 'rgba(255,255,255,0.3)'),
+                              bgcolor: storage.isGold ? '#FFD700' : storage.color || 'rgba(255,255,255,0.3)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center'
                             }}
                           >
                             {storage.icon ? (
-                              <i className={storage.icon} style={{ color: storage.isGold ? '#000' : 'white', fontSize: '1.1rem' }} />
+                              <i
+                                className={storage.icon}
+                                style={{ color: storage.isGold ? '#000' : 'white', fontSize: '1.1rem' }}
+                              />
                             ) : (
                               <i className='tabler-wallet' style={{ color: 'white', fontSize: '1.1rem' }} />
                             )}

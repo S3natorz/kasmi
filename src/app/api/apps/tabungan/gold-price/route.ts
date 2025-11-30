@@ -38,13 +38,13 @@ export async function GET() {
         const data = await response.json()
         // Price is in USD per troy ounce (31.1035 grams)
         const usdPerOunce = data.price
-        
+
         // Get USD to IDR exchange rate
         const exchangeResponse = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
         if (exchangeResponse.ok) {
           const exchangeData = await exchangeResponse.json()
           const usdToIdr = exchangeData.rates.IDR || 15500 // Fallback rate
-          
+
           // Convert to IDR per gram
           goldPricePerGram = (usdPerOunce * usdToIdr) / 31.1035
         }
@@ -60,7 +60,7 @@ export async function GET() {
         // Alternative: Use a simple estimation based on international gold price
         // Current average gold price in Indonesia is around Rp 1,100,000 - 1,300,000 per gram
         // This is a fallback - ideally should be fetched from real API
-        
+
         // Use static fallback with slight randomization to simulate market movement
         const basePrice = 1150000 // Base price per gram in IDR (Antam gold average)
         const variation = (Math.random() - 0.5) * 20000 // +/- 10,000 variation
@@ -90,10 +90,10 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Failed to fetch gold price:', error)
-    
+
     // Return cached price if available, otherwise use fallback
     const fallbackPrice = cachedGoldPrice?.price || 1150000
-    
+
     return NextResponse.json({
       pricePerGram: fallbackPrice,
       currency: 'IDR',

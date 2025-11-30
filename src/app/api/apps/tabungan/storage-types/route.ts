@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const isGold = body.isGold === true || body.isGold === 'true'
-    
+
     const storageType = await prisma.storageType.create({
       data: {
         name: body.name,
@@ -43,7 +43,7 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json()
     const isGold = body.isGold === true || body.isGold === 'true'
-    
+
     const storageType = await prisma.storageType.update({
       where: { id: body.id },
       data: {

@@ -137,7 +137,7 @@ const StorageTypesTable = () => {
   const [editingItem, setEditingItem] = useState<StorageTypeType | null>(null)
   const [loading, setLoading] = useState(true)
   const [colorAnchorEl, setColorAnchorEl] = useState<HTMLElement | null>(null)
-  
+
   // Gold price state
   const [goldPrice, setGoldPrice] = useState<number>(0)
   const [goldPriceLoading, setGoldPriceLoading] = useState(false)
@@ -153,7 +153,7 @@ const StorageTypesTable = () => {
     isGold: false,
     goldWeight: ''
   })
-  
+
   // Fetch gold price
   const fetchGoldPrice = async () => {
     try {
@@ -202,7 +202,16 @@ const StorageTypesTable = () => {
       })
     } else {
       setEditingItem(null)
-      setFormData({ name: '', description: '', icon: '', color: '', accountNumber: '', balance: '', isGold: false, goldWeight: '' })
+      setFormData({
+        name: '',
+        description: '',
+        icon: '',
+        color: '',
+        accountNumber: '',
+        balance: '',
+        isGold: false,
+        goldWeight: ''
+      })
     }
     setOpenDialog(true)
   }
@@ -275,10 +284,10 @@ const StorageTypesTable = () => {
             <div>
               <Typography fontWeight={500}>{row.original.name}</Typography>
               {row.original.isGold && (
-                <Chip 
-                  label='Emas' 
-                  size='small' 
-                  color='warning' 
+                <Chip
+                  label='Emas'
+                  size='small'
+                  color='warning'
                   variant='outlined'
                   sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
                 />
@@ -295,9 +304,7 @@ const StorageTypesTable = () => {
         header: 'Berat Emas',
         cell: ({ row }) => (
           <Typography>
-            {row.original.isGold && row.original.goldWeight 
-              ? `${row.original.goldWeight} gram` 
-              : '-'}
+            {row.original.isGold && row.original.goldWeight ? `${row.original.goldWeight} gram` : '-'}
           </Typography>
         )
       }),
@@ -371,12 +378,12 @@ const StorageTypesTable = () => {
         {/* Gold Price Info Banner */}
         {goldPrice > 0 && (
           <Box sx={{ px: 3, pt: 3 }}>
-            <Alert 
-              severity='info' 
+            <Alert
+              severity='info'
               icon={<i className='tabler-diamond' />}
               action={
-                <Button 
-                  size='small' 
+                <Button
+                  size='small'
                   onClick={fetchGoldPrice}
                   disabled={goldPriceLoading}
                   startIcon={goldPriceLoading ? <CircularProgress size={14} /> : <i className='tabler-refresh' />}
@@ -541,23 +548,25 @@ const StorageTypesTable = () => {
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
               />
             </Grid>
-            
+
             {/* Gold Toggle */}
             <Grid size={{ xs: 12 }}>
-              <Box sx={{ 
-                p: 2, 
-                borderRadius: 2, 
-                bgcolor: formData.isGold ? 'warning.lighter' : 'action.hover',
-                border: formData.isGold ? '1px solid' : 'none',
-                borderColor: 'warning.main'
-              }}>
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: formData.isGold ? 'warning.lighter' : 'action.hover',
+                  border: formData.isGold ? '1px solid' : 'none',
+                  borderColor: 'warning.main'
+                }}
+              >
                 <FormControlLabel
                   control={
                     <Switch
                       checked={formData.isGold}
                       onChange={e => {
-                        setFormData({ 
-                          ...formData, 
+                        setFormData({
+                          ...formData,
                           isGold: e.target.checked,
                           icon: e.target.checked ? 'tabler-diamond' : formData.icon,
                           color: e.target.checked ? '#FFD700' : formData.color,
@@ -570,7 +579,10 @@ const StorageTypesTable = () => {
                   label={
                     <Box>
                       <Typography fontWeight={500}>
-                        <i className='tabler-diamond' style={{ marginRight: 8, verticalAlign: 'middle', color: '#FFD700' }} />
+                        <i
+                          className='tabler-diamond'
+                          style={{ marginRight: 8, verticalAlign: 'middle', color: '#FFD700' }}
+                        />
                         Simpanan Emas
                       </Typography>
                       <Typography variant='caption' color='text.secondary'>
@@ -581,7 +593,7 @@ const StorageTypesTable = () => {
                 />
               </Box>
             </Grid>
-            
+
             {/* Gold Weight Input - Only show when isGold is true */}
             {formData.isGold && (
               <Grid size={{ xs: 12 }}>
@@ -603,7 +615,8 @@ const StorageTypesTable = () => {
                   <Box sx={{ mt: 1, p: 2, bgcolor: 'warning.lighter', borderRadius: 1 }}>
                     <Typography variant='body2' color='warning.dark'>
                       <i className='tabler-coin' style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                      Nilai estimasi: <strong>{formatCurrency(parseFloat(formData.goldWeight || '0') * goldPrice)}</strong>
+                      Nilai estimasi:{' '}
+                      <strong>{formatCurrency(parseFloat(formData.goldWeight || '0') * goldPrice)}</strong>
                     </Typography>
                     <Typography variant='caption' color='text.secondary'>
                       Berdasarkan harga emas {formatCurrency(goldPrice)}/gram
@@ -612,7 +625,7 @@ const StorageTypesTable = () => {
                 )}
               </Grid>
             )}
-            
+
             {/* Regular balance - Only show when NOT gold */}
             {!formData.isGold && (
               <>
@@ -641,7 +654,7 @@ const StorageTypesTable = () => {
                 </Grid>
               </>
             )}
-            
+
             <Grid size={{ xs: 12, sm: 6 }}>
               <Autocomplete
                 freeSolo

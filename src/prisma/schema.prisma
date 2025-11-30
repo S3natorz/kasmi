@@ -110,11 +110,11 @@ model StorageType {
   color             String?
   accountNumber     String?
   balance           Float             @default(0)
-  
+
   // Gold storage fields
   isGold            Boolean           @default(false)
   goldWeight        Float?            // Weight in grams
-  
+
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   savingsCategories SavingsCategory[]
