@@ -46,14 +46,28 @@ const typeConfig: Record<string, { label: string; color: 'success' | 'error' | '
 const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
   const [transactions, setTransactions] = useState<TransactionType[]>([])
   const [loading, setLoading] = useState(false)
+  const [goldPrice, setGoldPrice] = useState<number>(0)
   const theme = useTheme()
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
 
   useEffect(() => {
     if (open && storage) {
       fetchTransactions()
+      if (storage.isGold) {
+        fetchGoldPrice()
+      }
     }
   }, [open, storage])
+
+  const fetchGoldPrice = async () => {
+    try {
+      const res = await fetch('/api/apps/tabungan/gold-price')
+      const data = await res.json()
+      setGoldPrice(data.pricePerGram || 0)
+    } catch (error) {
+      console.error('Failed to fetch gold price:', error)
+    }
+  }
 
   const fetchTransactions = async () => {
     if (!storage) return
@@ -73,10 +87,16 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
 
   const handleClose = () => {
     setTransactions([])
+    setGoldPrice(0)
     onClose()
   }
 
   if (!storage) return null
+
+  // Calculate display value (gold or regular)
+  const displayValue = storage.isGold && storage.goldWeight && goldPrice > 0
+    ? storage.goldWeight * goldPrice
+    : storage.balance || 0
 
   // Calculate stats for this storage
   const totalIn = transactions
@@ -104,8 +124,10 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
       {/* Header with gradient */}
       <Box
         sx={{
-          background: `linear-gradient(135deg, ${storage.color || '#667eea'} 0%, ${storage.color ? `${storage.color}dd` : '#764ba2'} 100%)`,
-          color: 'white',
+          background: storage.isGold 
+            ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+            : `linear-gradient(135deg, ${storage.color || '#667eea'} 0%, ${storage.color ? `${storage.color}dd` : '#764ba2'} 100%)`,
+          color: storage.isGold ? '#000' : 'white',
           position: 'relative',
           overflow: 'hidden',
           '&::before': {
@@ -128,28 +150,28 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                   width: 48,
                   height: 48,
                   borderRadius: 2,
-                  bgcolor: 'rgba(255,255,255,0.2)',
+                  bgcolor: storage.isGold ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}
               >
                 {storage.icon ? (
-                  <i className={storage.icon} style={{ color: 'white', fontSize: '1.5rem' }} />
+                  <i className={storage.icon} style={{ color: storage.isGold ? '#000' : 'white', fontSize: '1.5rem' }} />
                 ) : (
-                  <i className='tabler-wallet' style={{ color: 'white', fontSize: '1.5rem' }} />
+                  <i className='tabler-wallet' style={{ color: storage.isGold ? '#000' : 'white', fontSize: '1.5rem' }} />
                 )}
               </Box>
               <Box>
-                <Typography variant='h6' sx={{ fontWeight: 600, color: 'white' }}>
+                <Typography variant='h6' sx={{ fontWeight: 600, color: storage.isGold ? '#000' : 'white' }}>
                   {storage.name}
                 </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
-                  Riwayat Transaksi
+                <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
+                  {storage.isGold ? 'Simpanan Emas' : 'Riwayat Transaksi'}
                 </Typography>
               </Box>
             </Box>
-            <IconButton onClick={handleClose} sx={{ color: 'white' }}>
+            <IconButton onClick={handleClose} sx={{ color: storage.isGold ? '#000' : 'white' }}>
               <i className='tabler-x' />
             </IconButton>
           </Box>
@@ -157,19 +179,43 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
 
         {/* Balance & Stats */}
         <Box sx={{ px: 3, pb: 3, position: 'relative', zIndex: 1 }}>
+          {/* Gold Info Section */}
+          {storage.isGold && storage.goldWeight && (
+            <Box sx={{ mt: 2, mb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                <Typography
+                  variant='h3'
+                  sx={{
+                    fontWeight: 700,
+                    color: '#000',
+                    fontSize: { xs: '2rem', sm: '2.5rem' }
+                  }}
+                >
+                  {storage.goldWeight}
+                </Typography>
+                <Typography sx={{ fontWeight: 600, color: 'rgba(0,0,0,0.7)', fontSize: '1.2rem' }}>
+                  gram
+                </Typography>
+              </Box>
+              <Typography sx={{ color: 'rgba(0,0,0,0.6)', fontSize: '0.85rem' }}>
+                Berat Emas
+              </Typography>
+            </Box>
+          )}
+          
           <Typography
             variant='h4'
             sx={{
               fontWeight: 700,
-              color: 'white',
-              mt: 2,
+              color: storage.isGold ? '#000' : 'white',
+              mt: storage.isGold ? 1 : 2,
               fontSize: { xs: '1.5rem', sm: '2rem' }
             }}
           >
-            {formatCurrency(storage.balance || 0)}
+            {formatCurrency(displayValue)}
           </Typography>
-          <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', mb: 2 }}>
-            Saldo Saat Ini
+          <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem', mb: 2 }}>
+            {storage.isGold ? `Nilai Saat Ini @${formatCurrency(goldPrice)}/gram` : 'Saldo Saat Ini'}
           </Typography>
 
           {/* Mini Stats */}
@@ -179,12 +225,14 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 flex: 1,
                 p: 1.5,
                 borderRadius: 2,
-                bgcolor: 'rgba(255,255,255,0.15)',
+                bgcolor: storage.isGold ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)',
                 textAlign: 'center'
               }}
             >
-              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Masuk</Typography>
-              <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem' }}>
+              <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
+                {storage.isGold ? 'Beli' : 'Masuk'}
+              </Typography>
+              <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {formatCurrency(totalIn)}
               </Typography>
             </Box>
@@ -193,12 +241,14 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 flex: 1,
                 p: 1.5,
                 borderRadius: 2,
-                bgcolor: 'rgba(255,255,255,0.15)',
+                bgcolor: storage.isGold ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)',
                 textAlign: 'center'
               }}
             >
-              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Keluar</Typography>
-              <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem' }}>
+              <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
+                {storage.isGold ? 'Jual' : 'Keluar'}
+              </Typography>
+              <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {formatCurrency(totalOut)}
               </Typography>
             </Box>
@@ -207,12 +257,12 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 flex: 1,
                 p: 1.5,
                 borderRadius: 2,
-                bgcolor: 'rgba(255,255,255,0.15)',
+                bgcolor: storage.isGold ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)',
                 textAlign: 'center'
               }}
             >
-              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Transaksi</Typography>
-              <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '0.9rem' }}>
+              <Typography sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Transaksi</Typography>
+              <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {transactions.length}
               </Typography>
             </Box>

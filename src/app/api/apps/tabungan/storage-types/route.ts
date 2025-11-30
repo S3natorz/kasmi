@@ -17,6 +17,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
+    const isGold = body.isGold === true || body.isGold === 'true'
+    
     const storageType = await prisma.storageType.create({
       data: {
         name: body.name,
@@ -24,7 +26,9 @@ export async function POST(request: Request) {
         icon: body.icon || null,
         color: body.color || null,
         accountNumber: body.accountNumber || null,
-        balance: body.balance ? parseFloat(body.balance) : 0
+        balance: body.balance ? parseFloat(body.balance) : 0,
+        isGold: isGold,
+        goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
       }
     })
     return NextResponse.json(storageType, { status: 201 })
@@ -38,6 +42,8 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json()
+    const isGold = body.isGold === true || body.isGold === 'true'
+    
     const storageType = await prisma.storageType.update({
       where: { id: body.id },
       data: {
@@ -46,7 +52,9 @@ export async function PUT(request: Request) {
         icon: body.icon || null,
         color: body.color || null,
         accountNumber: body.accountNumber || null,
-        balance: body.balance ? parseFloat(body.balance) : 0
+        balance: body.balance ? parseFloat(body.balance) : 0,
+        isGold: isGold,
+        goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
       }
     })
     return NextResponse.json(storageType)

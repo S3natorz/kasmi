@@ -43,6 +43,9 @@ export type StorageTypeType = {
   color?: string | null
   accountNumber?: string | null
   balance: number
+  // Gold storage fields
+  isGold?: boolean
+  goldWeight?: number | null // Weight in grams
   createdAt: Date
   updatedAt: Date
 }

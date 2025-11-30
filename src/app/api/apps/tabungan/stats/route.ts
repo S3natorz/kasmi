@@ -5,11 +5,26 @@ import prisma from '@/libs/prisma'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const month = searchParams.get('month') // Format: YYYY-MM
+    const startDateParam = searchParams.get('startDate') // Format: YYYY-MM-DD
+    const endDateParam = searchParams.get('endDate') // Format: YYYY-MM-DD
+    const month = searchParams.get('month') // Legacy: Format: YYYY-MM
 
     let dateFilter: any = {}
 
-    if (month) {
+    if (startDateParam && endDateParam) {
+      // New date range filter
+      const startDate = new Date(startDateParam)
+      startDate.setHours(0, 0, 0, 0)
+      const endDate = new Date(endDateParam)
+      endDate.setHours(23, 59, 59, 999)
+      dateFilter = {
+        date: {
+          gte: startDate,
+          lte: endDate
+        }
+      }
+    } else if (month) {
+      // Legacy month filter for backward compatibility
       const [year, monthNum] = month.split('-').map(Number)
       const startDate = new Date(year, monthNum - 1, 1)
       const endDate = new Date(year, monthNum, 0, 23, 59, 59)

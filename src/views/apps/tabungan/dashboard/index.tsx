@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -15,6 +15,8 @@ import MenuItem from '@mui/material/MenuItem'
 import Box from '@mui/material/Box'
 import Fab from '@mui/material/Fab'
 import Tooltip from '@mui/material/Tooltip'
+import Collapse from '@mui/material/Collapse'
+import Button from '@mui/material/Button'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -26,6 +28,8 @@ import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsD
 // Type Imports
 import type { ThemeColor } from '@core/types'
 import type { StorageTypeType } from '@/types/apps/tabunganTypes'
+
+type FilterType = 'daily' | 'weekly' | 'monthly' | 'custom'
 
 type StatsData = {
   totalIncome: number
@@ -58,22 +62,107 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
+// Helper to format date for API
+const formatDateForApi = (date: Date) => {
+  return date.toISOString().split('T')[0]
+}
+
+// Helper to get date range based on filter type
+const getDateRange = (filterType: FilterType, selectedDate: string, customStart?: string, customEnd?: string) => {
+  const now = new Date()
+
+  switch (filterType) {
+    case 'daily': {
+      const date = selectedDate ? new Date(selectedDate) : now
+      return {
+        startDate: formatDateForApi(date),
+        endDate: formatDateForApi(date)
+      }
+    }
+    case 'weekly': {
+      const date = selectedDate ? new Date(selectedDate) : now
+      const dayOfWeek = date.getDay()
+      const startOfWeek = new Date(date)
+      startOfWeek.setDate(date.getDate() - dayOfWeek)
+      const endOfWeek = new Date(startOfWeek)
+      endOfWeek.setDate(startOfWeek.getDate() + 6)
+      return {
+        startDate: formatDateForApi(startOfWeek),
+        endDate: formatDateForApi(endOfWeek)
+      }
+    }
+    case 'monthly': {
+      const [year, month] = selectedDate.split('-').map(Number)
+      const startOfMonth = new Date(year, month - 1, 1)
+      const endOfMonth = new Date(year, month, 0)
+      return {
+        startDate: formatDateForApi(startOfMonth),
+        endDate: formatDateForApi(endOfMonth)
+      }
+    }
+    case 'custom': {
+      return {
+        startDate: customStart || formatDateForApi(now),
+        endDate: customEnd || formatDateForApi(now)
+      }
+    }
+    default:
+      return {
+        startDate: formatDateForApi(now),
+        endDate: formatDateForApi(now)
+      }
+  }
+}
+
 const TabunganDashboard = () => {
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [openAddDialog, setOpenAddDialog] = useState(false)
   const [openStorageDialog, setOpenStorageDialog] = useState(false)
   const [selectedStorage, setSelectedStorage] = useState<StorageTypeType | null>(null)
+  
+  // Gold price state
+  const [goldPrice, setGoldPrice] = useState<number>(0)
+
+  // Filter states
+  const [filterType, setFilterType] = useState<FilterType>('monthly')
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
+  const [selectedDate, setSelectedDate] = useState(() => formatDateForApi(new Date()))
+  const [customStartDate, setCustomStartDate] = useState(() => formatDateForApi(new Date()))
+  const [customEndDate, setCustomEndDate] = useState(() => formatDateForApi(new Date()))
+
+  // Get current date range based on filter
+  const dateRange = useMemo(() => {
+    if (filterType === 'monthly') {
+      return getDateRange(filterType, selectedMonth)
+    } else if (filterType === 'custom') {
+      return getDateRange(filterType, '', customStartDate, customEndDate)
+    } else {
+      return getDateRange(filterType, selectedDate)
+    }
+  }, [filterType, selectedMonth, selectedDate, customStartDate, customEndDate])
+
+  // Fetch gold price
+  const fetchGoldPrice = async () => {
+    try {
+      const res = await fetch('/api/apps/tabungan/gold-price')
+      const data = await res.json()
+      setGoldPrice(data.pricePerGram || 0)
+    } catch (error) {
+      console.error('Failed to fetch gold price:', error)
+    }
+  }
 
   const fetchStats = async () => {
     try {
       setLoading(true)
+      const { startDate, endDate } = dateRange
+
       const [statsRes, storageRes] = await Promise.all([
-        fetch(`/api/apps/tabungan/stats?month=${selectedMonth}`),
+        fetch(`/api/apps/tabungan/stats?startDate=${startDate}&endDate=${endDate}`),
         fetch('/api/apps/tabungan/storage-types')
       ])
       const [data, storages] = await Promise.all([statsRes.json(), storageRes.json()])
@@ -107,7 +196,8 @@ const TabunganDashboard = () => {
 
   useEffect(() => {
     fetchStats()
-  }, [selectedMonth])
+    fetchGoldPrice()
+  }, [dateRange])
 
   const getMonthOptions = () => {
     const options = []
@@ -121,39 +211,198 @@ const TabunganDashboard = () => {
     return options
   }
 
+  // Get label for current filter
+  const getFilterLabel = () => {
+    switch (filterType) {
+      case 'daily':
+        return new Date(selectedDate).toLocaleDateString('id-ID', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+      case 'weekly':
+        const weekStart = new Date(dateRange.startDate)
+        const weekEnd = new Date(dateRange.endDate)
+        return `${weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`
+      case 'monthly':
+        const [year, month] = selectedMonth.split('-')
+        return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', {
+          month: 'long',
+          year: 'numeric'
+        })
+      case 'custom':
+        return `${new Date(customStartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${new Date(customEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`
+      default:
+        return ''
+    }
+  }
+
+  // Get period label for stats cards
+  const getPeriodLabel = () => {
+    switch (filterType) {
+      case 'daily':
+        return 'Hari Ini'
+      case 'weekly':
+        return 'Minggu Ini'
+      case 'monthly':
+        return 'Bulan Ini'
+      case 'custom':
+        return 'Periode Ini'
+      default:
+        return ''
+    }
+  }
+
   if (loading || !stats) {
     return <DashboardStatsSkeleton />
   }
 
-  // Calculate total balance from all storage types
-  const totalBalance = stats.storageBalances.reduce((sum, s) => sum + (s.balance || 0), 0)
+  // Calculate total balance from all storage types (including gold value)
+  const totalBalance = stats.storageBalances.reduce((sum, s) => {
+    if (s.isGold && s.goldWeight) {
+      return sum + (s.goldWeight * goldPrice)
+    }
+    return sum + (s.balance || 0)
+  }, 0)
+  
+  // Calculate total gold weight
+  const totalGoldWeight = stats.storageBalances
+    .filter(s => s.isGold && s.goldWeight)
+    .reduce((sum, s) => sum + (s.goldWeight || 0), 0)
 
+  const periodLabel = getPeriodLabel()
   const statsCards: { title: string; value: number; icon: string; color: ThemeColor }[] = [
-    { title: 'Pemasukan Bulan Ini', value: stats.totalIncome, icon: 'tabler-arrow-up', color: 'success' },
-    { title: 'Pengeluaran Bulan Ini', value: stats.totalExpenses, icon: 'tabler-arrow-down', color: 'error' },
-    { title: 'Tabungan Bulan Ini', value: stats.totalSavings, icon: 'tabler-coin', color: 'info' },
+    { title: `Pemasukan ${periodLabel}`, value: stats.totalIncome, icon: 'tabler-arrow-up', color: 'success' },
+    { title: `Pengeluaran ${periodLabel}`, value: stats.totalExpenses, icon: 'tabler-arrow-down', color: 'error' },
+    { title: `Tabungan ${periodLabel}`, value: stats.totalSavings, icon: 'tabler-coin', color: 'info' },
     { title: 'Total Transaksi', value: stats.transactionCount, icon: 'tabler-receipt', color: 'warning' }
   ]
 
   return (
     <Grid container spacing={6}>
-      {/* Month Filter */}
+      {/* Filter Section */}
       <Grid size={{ xs: 12 }}>
         <Card>
-          <CardContent className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
-            <Typography variant='h5'>Dashboard Tabungan Keluarga</Typography>
-            <CustomTextField
-              select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-              className='min-is-[200px] w-full sm:w-auto'
-            >
-              {getMonthOptions().map(option => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </CustomTextField>
+          <CardContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Header */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: { xs: 'flex-start', sm: 'center' },
+                  justifyContent: 'space-between',
+                  gap: 2
+                }}
+              >
+                <Box>
+                  <Typography variant='h5'>Dashboard Tabungan Keluarga</Typography>
+                  <Typography variant='body2' color='text.secondary' sx={{ mt: 0.5 }}>
+                    <i className='tabler-calendar-event' style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                    {getFilterLabel()}
+                  </Typography>
+                </Box>
+
+                {/* Filter Type Buttons */}
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {[
+                    { value: 'daily', label: 'Harian', icon: 'tabler-calendar-event' },
+                    { value: 'weekly', label: 'Mingguan', icon: 'tabler-calendar-week' },
+                    { value: 'monthly', label: 'Bulanan', icon: 'tabler-calendar-month' },
+                    { value: 'custom', label: 'Custom', icon: 'tabler-calendar-stats' }
+                  ].map(filter => (
+                    <Chip
+                      key={filter.value}
+                      icon={<i className={filter.icon} style={{ fontSize: '1rem' }} />}
+                      label={filter.label}
+                      onClick={() => setFilterType(filter.value as FilterType)}
+                      color={filterType === filter.value ? 'primary' : 'default'}
+                      variant={filterType === filter.value ? 'filled' : 'outlined'}
+                      sx={{
+                        cursor: 'pointer',
+                        fontWeight: filterType === filter.value ? 600 : 400
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Filter Inputs */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+                {filterType === 'daily' && (
+                  <CustomTextField
+                    type='date'
+                    value={selectedDate}
+                    onChange={e => setSelectedDate(e.target.value)}
+                    size='small'
+                    sx={{ minWidth: 180 }}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                )}
+
+                {filterType === 'weekly' && (
+                  <CustomTextField
+                    type='date'
+                    value={selectedDate}
+                    onChange={e => setSelectedDate(e.target.value)}
+                    size='small'
+                    label='Pilih tanggal dalam minggu'
+                    sx={{ minWidth: 220 }}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                )}
+
+                {filterType === 'monthly' && (
+                  <CustomTextField
+                    select
+                    value={selectedMonth}
+                    onChange={e => setSelectedMonth(e.target.value)}
+                    size='small'
+                    sx={{ minWidth: 200 }}
+                  >
+                    {getMonthOptions().map(option => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </CustomTextField>
+                )}
+
+                {filterType === 'custom' && (
+                  <>
+                    <CustomTextField
+                      type='date'
+                      value={customStartDate}
+                      onChange={e => setCustomStartDate(e.target.value)}
+                      size='small'
+                      label='Dari Tanggal'
+                      sx={{ minWidth: 160 }}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                    <Typography color='text.secondary'>s/d</Typography>
+                    <CustomTextField
+                      type='date'
+                      value={customEndDate}
+                      onChange={e => setCustomEndDate(e.target.value)}
+                      size='small'
+                      label='Sampai Tanggal'
+                      sx={{ minWidth: 160 }}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </>
+                )}
+
+                <Button
+                  variant='outlined'
+                  size='small'
+                  startIcon={<i className='tabler-refresh' />}
+                  onClick={fetchStats}
+                >
+                  Refresh
+                </Button>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
       </Grid>
@@ -270,81 +519,115 @@ const TabunganDashboard = () => {
             </Box>
 
             {/* Storage Items */}
-            <Typography sx={{ color: 'rgba(255,255,255,0.8)', mb: 2, fontWeight: 600, fontSize: '0.875rem' }}>
-              Rincian Saldo (klik untuk detail)
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600, fontSize: '0.875rem' }}>
+                Rincian Saldo (klik untuk detail)
+              </Typography>
+              {totalGoldWeight > 0 && goldPrice > 0 && (
+                <Chip
+                  icon={<i className='tabler-diamond' style={{ color: '#FFD700', fontSize: '0.9rem' }} />}
+                  label={`${totalGoldWeight}g @${formatCurrency(goldPrice)}/g`}
+                  size='small'
+                  sx={{
+                    bgcolor: 'rgba(255,215,0,0.2)',
+                    color: '#FFD700',
+                    fontWeight: 500,
+                    fontSize: '0.7rem'
+                  }}
+                />
+              )}
+            </Box>
             <Grid container spacing={2}>
               {stats.storageBalances.length > 0 ? (
-                stats.storageBalances.map((storage, index) => (
-                  <Grid key={index} size={{ xs: 6, sm: 4, md: 3 }}>
-                    <Box
-                      onClick={() => {
-                        setSelectedStorage(storage)
-                        setOpenStorageDialog(true)
-                      }}
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        bgcolor: 'rgba(255,255,255,0.15)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1,
-                        height: '100%',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          bgcolor: 'rgba(255,255,255,0.25)',
-                          transform: 'translateY(-2px)'
-                        },
-                        '&:active': {
-                          transform: 'translateY(0)'
-                        }
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Box
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 1.5,
-                            bgcolor: storage.color || 'rgba(255,255,255,0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          {storage.icon ? (
-                            <i className={storage.icon} style={{ color: 'white', fontSize: '1.1rem' }} />
-                          ) : (
-                            <i className='tabler-wallet' style={{ color: 'white', fontSize: '1.1rem' }} />
-                          )}
+                stats.storageBalances.map((storage, index) => {
+                  const displayValue = storage.isGold && storage.goldWeight 
+                    ? storage.goldWeight * goldPrice 
+                    : storage.balance || 0
+                  
+                  return (
+                    <Grid key={index} size={{ xs: 6, sm: 4, md: 3 }}>
+                      <Box
+                        onClick={() => {
+                          setSelectedStorage(storage)
+                          setOpenStorageDialog(true)
+                        }}
+                        sx={{
+                          p: 2,
+                          borderRadius: 2,
+                          bgcolor: storage.isGold ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.15)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 1,
+                          height: '100%',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          border: storage.isGold ? '1px solid rgba(255,215,0,0.3)' : 'none',
+                          '&:hover': {
+                            bgcolor: storage.isGold ? 'rgba(255,215,0,0.25)' : 'rgba(255,255,255,0.25)',
+                            transform: 'translateY(-2px)'
+                          },
+                          '&:active': {
+                            transform: 'translateY(0)'
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 1.5,
+                              bgcolor: storage.isGold ? '#FFD700' : (storage.color || 'rgba(255,255,255,0.3)'),
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            {storage.icon ? (
+                              <i className={storage.icon} style={{ color: storage.isGold ? '#000' : 'white', fontSize: '1.1rem' }} />
+                            ) : (
+                              <i className='tabler-wallet' style={{ color: 'white', fontSize: '1.1rem' }} />
+                            )}
+                          </Box>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography
+                              sx={{
+                                color: 'rgba(255,255,255,0.9)',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}
+                            >
+                              {storage.name}
+                            </Typography>
+                            {storage.isGold && storage.goldWeight && (
+                              <Typography
+                                sx={{
+                                  color: '#FFD700',
+                                  fontSize: '0.65rem',
+                                  fontWeight: 500
+                                }}
+                              >
+                                {storage.goldWeight} gram
+                              </Typography>
+                            )}
+                          </Box>
                         </Box>
                         <Typography
                           sx={{
-                            color: 'rgba(255,255,255,0.9)',
-                            fontSize: '0.8rem',
-                            fontWeight: 500,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            flex: 1
+                            fontSize: { xs: '0.95rem', sm: '1.1rem' },
+                            fontWeight: 700,
+                            color: storage.isGold ? '#FFD700' : 'white'
                           }}
                         >
-                          {storage.name}
+                          {formatCurrency(displayValue)}
                         </Typography>
                       </Box>
-                      <Typography
-                        sx={{
-                          fontSize: { xs: '0.95rem', sm: '1.1rem' },
-                          fontWeight: 700,
-                          color: 'white'
-                        }}
-                      >
-                        {formatCurrency(storage.balance || 0)}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                ))
+                    </Grid>
+                  )
+                })
               ) : (
                 <Grid size={{ xs: 12 }}>
                   <Box
