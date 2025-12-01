@@ -39,10 +39,7 @@ export async function GET(request: Request) {
 
     // Filter by storageTypeId (either from or to)
     if (storageTypeId) {
-      where.OR = [
-        { fromStorageTypeId: storageTypeId },
-        { toStorageTypeId: storageTypeId }
-      ]
+      where.OR = [{ fromStorageTypeId: storageTypeId }, { toStorageTypeId: storageTypeId }]
     }
 
     const transactions = await prisma.transaction.findMany({
@@ -70,7 +67,12 @@ export async function POST(request: Request) {
     const body = await request.json()
     const amount = parseFloat(body.amount)
 
-    console.log('Creating transaction:', { type: body.type, amount, fromStorageTypeId: body.fromStorageTypeId, toStorageTypeId: body.toStorageTypeId })
+    console.log('Creating transaction:', {
+      type: body.type,
+      amount,
+      fromStorageTypeId: body.fromStorageTypeId,
+      toStorageTypeId: body.toStorageTypeId
+    })
 
     // ALUR BARU:
     // 1. Income (Pemasukan) -> langsung masuk ke toStorageType
@@ -94,7 +96,12 @@ export async function POST(request: Request) {
         await updateStorageBalance(body.fromStorageTypeId, amount, false)
       }
     } else if (body.type === 'transfer') {
-      if (body.fromStorageTypeId && body.fromStorageTypeId !== '' && body.toStorageTypeId && body.toStorageTypeId !== '') {
+      if (
+        body.fromStorageTypeId &&
+        body.fromStorageTypeId !== '' &&
+        body.toStorageTypeId &&
+        body.toStorageTypeId !== ''
+      ) {
         console.log('Transfer: From', body.fromStorageTypeId, 'To', body.toStorageTypeId)
         await updateStorageBalance(body.fromStorageTypeId, amount, false)
         await updateStorageBalance(body.toStorageTypeId, amount, true)

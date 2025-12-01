@@ -268,11 +268,13 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
                 helperText={!formData.toStorageTypeId ? 'Pilih simpanan tujuan' : ''}
               >
                 <MenuItem value=''>-- Pilih Simpanan --</MenuItem>
-                {storageTypes.filter(s => !s.isGold).map(storage => (
-                  <MenuItem key={storage.id} value={storage.id}>
-                    {storage.name}
-                  </MenuItem>
-                ))}
+                {storageTypes
+                  .filter(s => !s.isGold)
+                  .map(storage => (
+                    <MenuItem key={storage.id} value={storage.id}>
+                      {storage.name}
+                    </MenuItem>
+                  ))}
               </CustomTextField>
             </Grid>
           )}
@@ -291,11 +293,13 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
                 helperText={!formData.fromStorageTypeId ? 'Pilih simpanan sumber' : ''}
               >
                 <MenuItem value=''>-- Pilih Simpanan --</MenuItem>
-                {storageTypes.filter(s => !s.isGold).map(storage => (
-                  <MenuItem key={storage.id} value={storage.id}>
-                    {storage.name} (Saldo: Rp {(storage.balance || 0).toLocaleString('id-ID')})
-                  </MenuItem>
-                ))}
+                {storageTypes
+                  .filter(s => !s.isGold)
+                  .map(storage => (
+                    <MenuItem key={storage.id} value={storage.id}>
+                      {storage.name} (Saldo: Rp {(storage.balance || 0).toLocaleString('id-ID')})
+                    </MenuItem>
+                  ))}
               </CustomTextField>
             </Grid>
           )}
@@ -314,11 +318,13 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
                   error={!formData.fromStorageTypeId}
                 >
                   <MenuItem value=''>-- Pilih --</MenuItem>
-                  {storageTypes.filter(s => !s.isGold).map(storage => (
-                    <MenuItem key={storage.id} value={storage.id}>
-                      {storage.name}
-                    </MenuItem>
-                  ))}
+                  {storageTypes
+                    .filter(s => !s.isGold)
+                    .map(storage => (
+                      <MenuItem key={storage.id} value={storage.id}>
+                        {storage.name}
+                      </MenuItem>
+                    ))}
                 </CustomTextField>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
@@ -389,11 +395,11 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
         <Button variant='outlined' color='secondary' onClick={onClose}>
           Batal
         </Button>
-        <Button 
-          variant='contained' 
-          onClick={handleSubmit} 
+        <Button
+          variant='contained'
+          onClick={handleSubmit}
           disabled={
-            loading || 
+            loading ||
             !formData.amount ||
             (formData.type === 'income' && !formData.toStorageTypeId) ||
             ((formData.type === 'expense' || formData.type === 'savings') && !formData.fromStorageTypeId) ||
