@@ -260,12 +260,15 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
               <CustomTextField
                 select
                 fullWidth
+                required
                 label='Masuk ke Simpanan'
                 value={formData.toStorageTypeId}
                 onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
+                error={!formData.toStorageTypeId}
+                helperText={!formData.toStorageTypeId ? 'Pilih simpanan tujuan' : ''}
               >
                 <MenuItem value=''>-- Pilih Simpanan --</MenuItem>
-                {storageTypes.map(storage => (
+                {storageTypes.filter(s => !s.isGold).map(storage => (
                   <MenuItem key={storage.id} value={storage.id}>
                     {storage.name}
                   </MenuItem>
@@ -280,12 +283,15 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
               <CustomTextField
                 select
                 fullWidth
+                required
                 label='Ambil dari Simpanan'
                 value={formData.fromStorageTypeId}
                 onChange={e => setFormData({ ...formData, fromStorageTypeId: e.target.value })}
+                error={!formData.fromStorageTypeId}
+                helperText={!formData.fromStorageTypeId ? 'Pilih simpanan sumber' : ''}
               >
                 <MenuItem value=''>-- Pilih Simpanan --</MenuItem>
-                {storageTypes.map(storage => (
+                {storageTypes.filter(s => !s.isGold).map(storage => (
                   <MenuItem key={storage.id} value={storage.id}>
                     {storage.name} (Saldo: Rp {(storage.balance || 0).toLocaleString('id-ID')})
                   </MenuItem>
@@ -301,12 +307,14 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
                 <CustomTextField
                   select
                   fullWidth
+                  required
                   label='Dari Simpanan'
                   value={formData.fromStorageTypeId}
                   onChange={e => setFormData({ ...formData, fromStorageTypeId: e.target.value })}
+                  error={!formData.fromStorageTypeId}
                 >
                   <MenuItem value=''>-- Pilih --</MenuItem>
-                  {storageTypes.map(storage => (
+                  {storageTypes.filter(s => !s.isGold).map(storage => (
                     <MenuItem key={storage.id} value={storage.id}>
                       {storage.name}
                     </MenuItem>
@@ -317,13 +325,15 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
                 <CustomTextField
                   select
                   fullWidth
+                  required
                   label='Ke Simpanan'
                   value={formData.toStorageTypeId}
                   onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
+                  error={!formData.toStorageTypeId}
                 >
                   <MenuItem value=''>-- Pilih --</MenuItem>
                   {storageTypes
-                    .filter(s => s.id !== formData.fromStorageTypeId)
+                    .filter(s => s.id !== formData.fromStorageTypeId && !s.isGold)
                     .map(storage => (
                       <MenuItem key={storage.id} value={storage.id}>
                         {storage.name}
@@ -379,7 +389,17 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
         <Button variant='outlined' color='secondary' onClick={onClose}>
           Batal
         </Button>
-        <Button variant='contained' onClick={handleSubmit} disabled={loading || !formData.amount}>
+        <Button 
+          variant='contained' 
+          onClick={handleSubmit} 
+          disabled={
+            loading || 
+            !formData.amount ||
+            (formData.type === 'income' && !formData.toStorageTypeId) ||
+            ((formData.type === 'expense' || formData.type === 'savings') && !formData.fromStorageTypeId) ||
+            (formData.type === 'transfer' && (!formData.fromStorageTypeId || !formData.toStorageTypeId))
+          }
+        >
           {loading ? 'Menyimpan...' : 'Simpan'}
         </Button>
       </DialogActions>

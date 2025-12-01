@@ -6,10 +6,13 @@ async function updateStorageBalance(storageTypeId: string, amount: number, isAdd
   const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
   if (storage) {
     const newBalance = isAdd ? storage.balance + amount : storage.balance - amount
+    console.log(`Updating storage ${storage.name}: ${storage.balance} ${isAdd ? '+' : '-'} ${amount} = ${newBalance}`)
     await prisma.storageType.update({
       where: { id: storageTypeId },
       data: { balance: Math.max(0, newBalance) }
     })
+  } else {
+    console.log(`Storage not found: ${storageTypeId}`)
   }
 }
 
@@ -67,6 +70,8 @@ export async function POST(request: Request) {
     const body = await request.json()
     const amount = parseFloat(body.amount)
 
+    console.log('Creating transaction:', { type: body.type, amount, fromStorageTypeId: body.fromStorageTypeId, toStorageTypeId: body.toStorageTypeId })
+
     // ALUR BARU:
     // 1. Income (Pemasukan) -> langsung masuk ke toStorageType
     // 2. Expense (Pengeluaran) -> mengambil dari fromStorageType
@@ -74,19 +79,23 @@ export async function POST(request: Request) {
     // 4. Transfer -> dari fromStorageType ke toStorageType
 
     if (body.type === 'income') {
-      if (body.toStorageTypeId) {
+      if (body.toStorageTypeId && body.toStorageTypeId !== '') {
+        console.log('Income: Adding to storage', body.toStorageTypeId)
         await updateStorageBalance(body.toStorageTypeId, amount, true)
       }
     } else if (body.type === 'expense') {
-      if (body.fromStorageTypeId) {
+      if (body.fromStorageTypeId && body.fromStorageTypeId !== '') {
+        console.log('Expense: Subtracting from storage', body.fromStorageTypeId)
         await updateStorageBalance(body.fromStorageTypeId, amount, false)
       }
     } else if (body.type === 'savings') {
-      if (body.fromStorageTypeId) {
+      if (body.fromStorageTypeId && body.fromStorageTypeId !== '') {
+        console.log('Savings: Subtracting from storage', body.fromStorageTypeId)
         await updateStorageBalance(body.fromStorageTypeId, amount, false)
       }
     } else if (body.type === 'transfer') {
-      if (body.fromStorageTypeId && body.toStorageTypeId) {
+      if (body.fromStorageTypeId && body.fromStorageTypeId !== '' && body.toStorageTypeId && body.toStorageTypeId !== '') {
+        console.log('Transfer: From', body.fromStorageTypeId, 'To', body.toStorageTypeId)
         await updateStorageBalance(body.fromStorageTypeId, amount, false)
         await updateStorageBalance(body.toStorageTypeId, amount, true)
       }
