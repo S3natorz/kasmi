@@ -44,7 +44,7 @@ export async function GET(request: Request) {
         savingsCategory: true,
         expenseCategory: true
       },
-      orderBy: { date: 'desc' }
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
     })
 
     // Calculate totals

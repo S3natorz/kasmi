@@ -24,6 +24,10 @@ import CustomTextField from '@core/components/mui/TextField'
 import { DashboardStatsSkeleton } from '@/components/skeletons'
 import AddTransactionDialog from '@/components/dialogs/AddTransactionDialog'
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
+import TransactionsByTypeDialog from '@/components/dialogs/TransactionsByTypeDialog'
+import ExpenseCategoryTransactionsDialog from '@/components/dialogs/ExpenseCategoryTransactionsDialog'
+
+import type { TransactionFilterType } from '@/components/dialogs/TransactionsByTypeDialog'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -120,6 +124,22 @@ const TabunganDashboard = () => {
   const [openAddDialog, setOpenAddDialog] = useState(false)
   const [openStorageDialog, setOpenStorageDialog] = useState(false)
   const [selectedStorage, setSelectedStorage] = useState<StorageTypeType | null>(null)
+
+  // Transaction by type dialog state
+  const [openTypeDialog, setOpenTypeDialog] = useState(false)
+  const [selectedFilterType, setSelectedFilterType] = useState<TransactionFilterType>('all')
+  const [selectedDialogTitle, setSelectedDialogTitle] = useState('')
+  const [selectedDialogAmount, setSelectedDialogAmount] = useState(0)
+
+  // Expense category dialog state
+  const [openExpenseCategoryDialog, setOpenExpenseCategoryDialog] = useState(false)
+  const [selectedExpenseCategory, setSelectedExpenseCategory] = useState<{
+    category: string
+    amount: number
+    budget?: number
+    color?: string
+    icon?: string
+  } | null>(null)
 
   // Gold price state
   const [goldPrice, setGoldPrice] = useState<number>(0)
@@ -272,11 +292,50 @@ const TabunganDashboard = () => {
     .reduce((sum, s) => sum + (s.goldWeight || 0), 0)
 
   const periodLabel = getPeriodLabel()
-  const statsCards: { title: string; value: number; icon: string; color: ThemeColor }[] = [
-    { title: `Pemasukan ${periodLabel}`, value: stats.totalIncome, icon: 'tabler-arrow-up', color: 'success' },
-    { title: `Pengeluaran ${periodLabel}`, value: stats.totalExpenses, icon: 'tabler-arrow-down', color: 'error' },
-    { title: `Tabungan ${periodLabel}`, value: stats.totalSavings, icon: 'tabler-coin', color: 'info' },
-    { title: 'Total Transaksi', value: stats.transactionCount, icon: 'tabler-receipt', color: 'warning' }
+
+  // Handler untuk klik statistics card
+  const handleStatCardClick = (type: TransactionFilterType, title: string, amount: number) => {
+    setSelectedFilterType(type)
+    setSelectedDialogTitle(title)
+    setSelectedDialogAmount(amount)
+    setOpenTypeDialog(true)
+  }
+
+  const statsCards: {
+    title: string
+    value: number
+    icon: string
+    color: ThemeColor
+    filterType: TransactionFilterType
+  }[] = [
+    {
+      title: `Pemasukan ${periodLabel}`,
+      value: stats.totalIncome,
+      icon: 'tabler-arrow-up',
+      color: 'success',
+      filterType: 'income'
+    },
+    {
+      title: `Pengeluaran ${periodLabel}`,
+      value: stats.totalExpenses,
+      icon: 'tabler-arrow-down',
+      color: 'error',
+      filterType: 'expense'
+    },
+    {
+      title: `Tabungan ${periodLabel}`,
+      value: stats.totalSavings,
+      icon: 'tabler-coin',
+      color: 'info',
+      filterType: 'savings'
+    },
+    {
+      title: 'Total Transaksi',
+      value: stats.transactionCount,
+      icon: 'tabler-receipt',
+      color: 'warning',
+      filterType: 'all'
+    }
   ]
 
   return (
@@ -410,7 +469,20 @@ const TabunganDashboard = () => {
       {/* Statistics Cards */}
       {statsCards.map((stat, index) => (
         <Grid key={index} size={{ xs: 6, md: 3 }}>
-          <Card>
+          <Card
+            onClick={() => handleStatCardClick(stat.filterType, stat.title, stat.value)}
+            sx={{
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: 4
+              },
+              '&:active': {
+                transform: 'translateY(0)'
+              }
+            }}
+          >
             <CardContent className='flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4'>
               <CustomAvatar color={stat.color} variant='rounded' size={48} skin='light' className='shrink-0'>
                 <i className={`${stat.icon} text-xl`} />
@@ -695,11 +767,43 @@ const TabunganDashboard = () => {
               stats.expensesByCategory.map((item, index) => {
                 const progress = item.budget ? Math.min((item.amount / item.budget) * 100, 100) : 0
                 const isOverBudget = item.budget && item.amount > item.budget
+
+                // Dynamic color based on progress
+                const getProgressColor = (): 'success' | 'warning' | 'error' => {
+                  if (progress < 50) return 'success'
+                  if (progress < 100) return 'warning'
+                  return 'error'
+                }
+
+                const progressColor = getProgressColor()
+
                 return (
-                  <div key={index} className='flex flex-col gap-2'>
+                  <Box
+                    key={index}
+                    onClick={() => {
+                      setSelectedExpenseCategory(item)
+                      setOpenExpenseCategoryDialog(true)
+                    }}
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1,
+                      p: 1.5,
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: theme =>
+                          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                        transform: 'translateX(4px)'
+                      }
+                    }}
+                  >
                     <div className='flex items-center justify-between flex-wrap gap-1'>
                       <div className='flex items-center gap-2 flex-wrap'>
-                        <Typography variant='body1'>{item.category}</Typography>
+                        <Typography variant='body1' sx={{ fontWeight: 500 }}>
+                          {item.category}
+                        </Typography>
                         {isOverBudget && <Chip label='Melebihi Budget' color='error' size='small' />}
                       </div>
                       <Typography variant='body2' color='text.secondary'>
@@ -710,11 +814,11 @@ const TabunganDashboard = () => {
                       <LinearProgress
                         variant='determinate'
                         value={progress}
-                        color={isOverBudget ? 'error' : 'warning'}
+                        color={progressColor}
                         sx={{ height: 8, borderRadius: 1 }}
                       />
                     )}
-                  </div>
+                  </Box>
                 )
               })
             ) : (
@@ -834,6 +938,30 @@ const TabunganDashboard = () => {
           setSelectedStorage(null)
         }}
         storage={selectedStorage}
+      />
+
+      {/* Transactions By Type Dialog */}
+      <TransactionsByTypeDialog
+        open={openTypeDialog}
+        onClose={() => setOpenTypeDialog(false)}
+        filterType={selectedFilterType}
+        startDate={dateRange.startDate}
+        endDate={dateRange.endDate}
+        title={selectedDialogTitle}
+        totalAmount={selectedDialogAmount}
+        totalCount={stats?.transactionCount}
+      />
+
+      {/* Expense Category Transactions Dialog */}
+      <ExpenseCategoryTransactionsDialog
+        open={openExpenseCategoryDialog}
+        onClose={() => {
+          setOpenExpenseCategoryDialog(false)
+          setSelectedExpenseCategory(null)
+        }}
+        category={selectedExpenseCategory}
+        startDate={dateRange.startDate}
+        endDate={dateRange.endDate}
       />
     </Grid>
   )

@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         fromStorageType: true,
         toStorageType: true
       },
-      orderBy: { date: 'desc' }
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
     })
 
     return NextResponse.json(transactions)
