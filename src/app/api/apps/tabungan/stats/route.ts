@@ -42,7 +42,9 @@ export async function GET(request: Request) {
       include: {
         familyMember: true,
         savingsCategory: true,
-        expenseCategory: true
+        expenseCategory: true,
+        fromStorageType: true,
+        toStorageType: true
       },
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
     })

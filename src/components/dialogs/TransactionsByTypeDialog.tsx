@@ -240,23 +240,46 @@ const TransactionsByTypeDialog = ({
                             </>
                           )}
                         </Box>
-                        {/* Show category if available */}
-                        {(transaction.savingsCategory || transaction.expenseCategory) && (
-                          <Chip
-                            label={transaction.savingsCategory?.name || transaction.expenseCategory?.name}
-                            size='small'
-                            sx={{
-                              mt: 0.5,
-                              height: 18,
-                              fontSize: '0.65rem',
-                              bgcolor:
-                                transaction.savingsCategory?.color ||
-                                transaction.expenseCategory?.color ||
-                                'primary.main',
-                              color: 'white'
-                            }}
-                          />
-                        )}
+                        {/* Show category and storage info */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                          {(transaction.savingsCategory || transaction.expenseCategory) && (
+                            <Chip
+                              label={transaction.savingsCategory?.name || transaction.expenseCategory?.name}
+                              size='small'
+                              sx={{
+                                height: 18,
+                                fontSize: '0.65rem',
+                                bgcolor:
+                                  transaction.savingsCategory?.color ||
+                                  transaction.expenseCategory?.color ||
+                                  'primary.main',
+                                color: 'white'
+                              }}
+                            />
+                          )}
+                          {/* Show storage name */}
+                          {(transaction.fromStorageType || transaction.toStorageType) && (
+                            <Chip
+                              icon={<i className='tabler-wallet' style={{ fontSize: '0.7rem' }} />}
+                              label={
+                                transaction.type === 'transfer'
+                                  ? `${transaction.fromStorageType?.name || ''} → ${transaction.toStorageType?.name || ''}`
+                                  : transaction.type === 'income'
+                                    ? transaction.toStorageType?.name
+                                    : transaction.fromStorageType?.name
+                              }
+                              size='small'
+                              variant='outlined'
+                              sx={{
+                                height: 18,
+                                fontSize: '0.65rem',
+                                '& .MuiChip-icon': {
+                                  marginLeft: '4px'
+                                }
+                              }}
+                            />
+                          )}
+                        </Box>
                       </Box>
                     </Box>
                     <Typography

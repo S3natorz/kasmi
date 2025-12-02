@@ -17,6 +17,7 @@ import Fab from '@mui/material/Fab'
 import Tooltip from '@mui/material/Tooltip'
 import Collapse from '@mui/material/Collapse'
 import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -26,12 +27,13 @@ import AddTransactionDialog from '@/components/dialogs/AddTransactionDialog'
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
 import TransactionsByTypeDialog from '@/components/dialogs/TransactionsByTypeDialog'
 import ExpenseCategoryTransactionsDialog from '@/components/dialogs/ExpenseCategoryTransactionsDialog'
+import EditTransactionDialog from '@/components/dialogs/EditTransactionDialog'
 
 import type { TransactionFilterType } from '@/components/dialogs/TransactionsByTypeDialog'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
-import type { StorageTypeType } from '@/types/apps/tabunganTypes'
+import type { StorageTypeType, TransactionType } from '@/types/apps/tabunganTypes'
 
 type FilterType = 'daily' | 'weekly' | 'monthly' | 'custom'
 
@@ -141,8 +143,36 @@ const TabunganDashboard = () => {
     icon?: string
   } | null>(null)
 
+  // Edit transaction dialog state
+  const [openEditDialog, setOpenEditDialog] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionType | null>(null)
+
   // Gold price state
   const [goldPrice, setGoldPrice] = useState<number>(0)
+
+  // Hide balance state
+  const [hideBalances, setHideBalances] = useState<boolean>(() => {
+    // Check localStorage on init
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('hideBalances') === 'true'
+    }
+    return false
+  })
+
+  // Toggle hide balances and save to localStorage
+  const toggleHideBalances = () => {
+    setHideBalances(prev => {
+      const newValue = !prev
+      localStorage.setItem('hideBalances', String(newValue))
+      return newValue
+    })
+  }
+
+  // Format currency with hide option
+  const formatCurrencyWithHide = (amount: number) => {
+    if (hideBalances) return '••••••••'
+    return formatCurrency(amount)
+  }
 
   // Filter states
   const [filterType, setFilterType] = useState<FilterType>('monthly')
@@ -493,10 +523,11 @@ const TabunganDashboard = () => {
                   className='font-semibold'
                   sx={{
                     fontSize: { xs: '0.875rem', sm: '1rem' },
-                    lineHeight: 1.2
+                    lineHeight: 1.2,
+                    letterSpacing: hideBalances && stat.title !== 'Total Transaksi' ? '1px' : 'normal'
                   }}
                 >
-                  {stat.title === 'Total Transaksi' ? stat.value : formatCurrency(stat.value)}
+                  {stat.title === 'Total Transaksi' ? stat.value : formatCurrencyWithHide(stat.value)}
                 </Typography>
                 <Typography
                   variant='body2'
@@ -563,18 +594,32 @@ const TabunganDashboard = () => {
                   <i className='tabler-wallet text-2xl' style={{ color: 'white' }} />
                 </Box>
                 <Box>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', fontWeight: 500 }}>
-                    Total Saldo Simpanan
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', fontWeight: 500 }}>
+                      Total Saldo Simpanan
+                    </Typography>
+                    <Tooltip title={hideBalances ? 'Tampilkan Saldo' : 'Sembunyikan Saldo'}>
+                      <IconButton
+                        onClick={toggleHideBalances}
+                        size='small'
+                        sx={{
+                          color: 'rgba(255,255,255,0.8)',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+                        }}
+                      >
+                        <i className={hideBalances ? 'tabler-eye-off' : 'tabler-eye'} style={{ fontSize: '1.1rem' }} />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                   <Typography
                     variant='h4'
                     sx={{
                       fontWeight: 700,
                       fontSize: { xs: '1.5rem', sm: '2rem' },
-                      letterSpacing: '-0.5px'
+                      letterSpacing: hideBalances ? '2px' : '-0.5px'
                     }}
                   >
-                    {formatCurrency(totalBalance)}
+                    {formatCurrencyWithHide(totalBalance)}
                   </Typography>
                 </Box>
               </Box>
@@ -693,10 +738,11 @@ const TabunganDashboard = () => {
                           sx={{
                             fontSize: { xs: '0.95rem', sm: '1.1rem' },
                             fontWeight: 700,
-                            color: storage.isGold ? '#FFD700' : 'white'
+                            color: storage.isGold ? '#FFD700' : 'white',
+                            letterSpacing: hideBalances ? '1px' : 'normal'
                           }}
                         >
-                          {formatCurrency(displayValue)}
+                          {formatCurrencyWithHide(displayValue)}
                         </Typography>
                       </Box>
                     </Grid>
@@ -833,65 +879,146 @@ const TabunganDashboard = () => {
         <Card>
           <CardHeader title='Transaksi Terbaru' />
           <CardContent>
-            <div className='flex flex-col gap-4'>
+            <div className='flex flex-col gap-2'>
               {stats.recentTransactions.length > 0 ? (
-                stats.recentTransactions.slice(0, 5).map((transaction, index) => (
-                  <div key={index} className='flex items-center justify-between gap-3'>
-                    <div className='flex items-center gap-3 overflow-hidden'>
-                      <CustomAvatar
-                        color={
-                          transaction.type === 'income'
-                            ? 'success'
-                            : transaction.type === 'expense'
-                              ? 'error'
-                              : transaction.type === 'transfer'
-                                ? 'warning'
-                                : 'info'
-                        }
-                        variant='rounded'
-                        size={40}
-                        skin='light'
-                      >
-                        <i
-                          className={
-                            transaction.type === 'income'
-                              ? 'tabler-arrow-up'
-                              : transaction.type === 'expense'
-                                ? 'tabler-arrow-down'
-                                : transaction.type === 'transfer'
-                                  ? 'tabler-transfer'
-                                  : 'tabler-coin'
-                          }
-                        />
-                      </CustomAvatar>
-                      <div className='overflow-hidden'>
-                        <Typography variant='body1' className='truncate'>
-                          {transaction.description || transaction.type}
-                        </Typography>
-                        <Typography variant='body2' color='text.secondary' className='truncate'>
-                          {new Date(transaction.date).toLocaleDateString('id-ID')}
-                          {transaction.familyMember && ` • ${transaction.familyMember.name}`}
-                        </Typography>
-                      </div>
-                    </div>
-                    <Typography
-                      variant='body1'
-                      color={
-                        transaction.type === 'income'
-                          ? 'success.main'
-                          : transaction.type === 'expense'
-                            ? 'error.main'
-                            : transaction.type === 'transfer'
-                              ? 'warning.main'
-                              : 'info.main'
+                stats.recentTransactions.slice(0, 5).map((transaction, index) => {
+                  // Get storage info based on transaction type
+                  const getStorageInfo = () => {
+                    if (transaction.type === 'income' && transaction.toStorageType) {
+                      return {
+                        label: 'ke',
+                        name: transaction.toStorageType.name,
+                        color: transaction.toStorageType.color
                       }
-                      className='whitespace-nowrap'
+                    } else if (
+                      (transaction.type === 'expense' || transaction.type === 'savings') &&
+                      transaction.fromStorageType
+                    ) {
+                      return {
+                        label: 'dari',
+                        name: transaction.fromStorageType.name,
+                        color: transaction.fromStorageType.color
+                      }
+                    } else if (transaction.type === 'transfer') {
+                      if (transaction.fromStorageType && transaction.toStorageType) {
+                        return {
+                          label: '',
+                          name: `${transaction.fromStorageType.name} → ${transaction.toStorageType.name}`,
+                          color: transaction.fromStorageType.color
+                        }
+                      }
+                    }
+                    return null
+                  }
+
+                  const storageInfo = getStorageInfo()
+
+                  return (
+                    <Box
+                      key={transaction.id || index}
+                      onClick={() => {
+                        setSelectedTransaction(transaction)
+                        setOpenEditDialog(true)
+                      }}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                        p: 2,
+                        borderRadius: 2,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: 'action.hover',
+                          transform: 'translateX(4px)'
+                        }
+                      }}
                     >
-                      {transaction.type === 'income' ? '+' : '-'}
-                      {formatCurrency(transaction.amount)}
-                    </Typography>
-                  </div>
-                ))
+                      <div className='flex items-center gap-3 overflow-hidden'>
+                        <CustomAvatar
+                          color={
+                            transaction.type === 'income'
+                              ? 'success'
+                              : transaction.type === 'expense'
+                                ? 'error'
+                                : transaction.type === 'transfer'
+                                  ? 'warning'
+                                  : 'info'
+                          }
+                          variant='rounded'
+                          size={44}
+                          skin='light'
+                        >
+                          <i
+                            className={
+                              transaction.type === 'income'
+                                ? 'tabler-arrow-up'
+                                : transaction.type === 'expense'
+                                  ? 'tabler-arrow-down'
+                                  : transaction.type === 'transfer'
+                                    ? 'tabler-transfer'
+                                    : 'tabler-coin'
+                            }
+                          />
+                        </CustomAvatar>
+                        <div className='overflow-hidden'>
+                          <Typography variant='body1' className='truncate' sx={{ fontWeight: 500 }}>
+                            {transaction.description || transaction.type}
+                          </Typography>
+                          <Typography
+                            variant='body2'
+                            color='text.secondary'
+                            className='truncate'
+                            sx={{ fontSize: '0.8rem' }}
+                          >
+                            {new Date(transaction.date).toLocaleDateString('id-ID')}
+                            {transaction.familyMember && ` • ${transaction.familyMember.name}`}
+                          </Typography>
+                        </div>
+                      </div>
+                      <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                        <Typography
+                          variant='body1'
+                          sx={{
+                            fontWeight: 600,
+                            color:
+                              transaction.type === 'income'
+                                ? 'success.main'
+                                : transaction.type === 'expense'
+                                  ? 'error.main'
+                                  : transaction.type === 'transfer'
+                                    ? 'warning.main'
+                                    : 'info.main',
+                            whiteSpace: 'nowrap',
+                            letterSpacing: hideBalances ? '1px' : 'normal'
+                          }}
+                        >
+                          {hideBalances
+                            ? '••••••••'
+                            : `${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}`}
+                        </Typography>
+                        {storageInfo && (
+                          <Typography
+                            variant='caption'
+                            color='text.secondary'
+                            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}
+                          >
+                            <Box
+                              sx={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                bgcolor: storageInfo.color || 'grey.500'
+                              }}
+                            />
+                            {storageInfo.name}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  )
+                })
               ) : (
                 <Typography color='text.secondary'>Belum ada transaksi</Typography>
               )}
@@ -962,6 +1089,17 @@ const TabunganDashboard = () => {
         category={selectedExpenseCategory}
         startDate={dateRange.startDate}
         endDate={dateRange.endDate}
+      />
+
+      {/* Edit Transaction Dialog */}
+      <EditTransactionDialog
+        open={openEditDialog}
+        onClose={() => {
+          setOpenEditDialog(false)
+          setSelectedTransaction(null)
+        }}
+        onSuccess={fetchStats}
+        transaction={selectedTransaction}
       />
     </Grid>
   )
