@@ -64,7 +64,7 @@ const TransactionsByTypeDialog = ({
   const [transactions, setTransactions] = useState<TransactionType[]>([])
   const [loading, setLoading] = useState(false)
   const theme = useTheme()
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   useEffect(() => {
     if (open) {
@@ -115,12 +115,21 @@ const TransactionsByTypeDialog = ({
       onClose={handleClose}
       maxWidth='sm'
       fullWidth
-      fullScreen={fullScreen}
       PaperProps={{
         sx: {
-          maxHeight: '90vh'
+          borderRadius: 3,
+          maxHeight: '90vh',
+          ...(isMobile && {
+            position: 'fixed',
+            bottom: 0,
+            m: 0,
+            borderBottomLeftRadius: 0,
+            borderBottomRightRadius: 0,
+            maxHeight: '92vh'
+          })
         }
       }}
+      sx={isMobile ? { '& .MuiDialog-container': { alignItems: 'flex-end' } } : undefined}
     >
       <DialogTitle sx={{ p: 3, pb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

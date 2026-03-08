@@ -48,7 +48,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
   const [loading, setLoading] = useState(false)
   const [goldPrice, setGoldPrice] = useState<number>(0)
   const theme = useTheme()
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   useEffect(() => {
     if (open && storage) {
@@ -112,15 +112,23 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
     <Dialog
       open={open}
       onClose={handleClose}
-      fullScreen={fullScreen}
       maxWidth='sm'
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: fullScreen ? 0 : 3,
-          maxHeight: fullScreen ? '100%' : '85vh'
+          borderRadius: 3,
+          maxHeight: '85vh',
+          ...(isMobile && {
+            position: 'fixed',
+            bottom: 0,
+            m: 0,
+            borderBottomLeftRadius: 0,
+            borderBottomRightRadius: 0,
+            maxHeight: '92vh'
+          })
         }
       }}
+      sx={isMobile ? { '& .MuiDialog-container': { alignItems: 'flex-end' } } : undefined}
     >
       {/* Header with gradient */}
       <Box
