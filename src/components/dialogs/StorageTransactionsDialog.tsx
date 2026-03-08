@@ -136,6 +136,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
       {/* Header with gradient */}
       <Box
         sx={{
+          flexShrink: 0,
           background: storage.isGold
             ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
             : `linear-gradient(135deg, ${storage.color || '#667eea'} 0%, ${storage.color ? `${storage.color}dd` : '#764ba2'} 100%)`,
@@ -296,7 +297,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
         </Box>
       </Box>
 
-      <DialogContent sx={{ p: 0, flex: 1, overflow: 'auto' }}>
+      <DialogContent sx={{ p: 0, flex: 1, overflow: 'auto', minHeight: 0 }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
             <CircularProgress />

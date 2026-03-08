@@ -134,7 +134,7 @@ const TransactionsByTypeDialog = ({
       }}
       sx={isMobile ? { '& .MuiDialog-container': { alignItems: 'flex-end' } } : undefined}
     >
-      <DialogTitle sx={{ p: 3, pb: 2 }}>
+      <DialogTitle sx={{ p: 3, pb: 2, flexShrink: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <CustomAvatar color={config.color} variant='rounded' size={48} skin='light'>
@@ -163,6 +163,7 @@ const TransactionsByTypeDialog = ({
         sx={{
           px: 3,
           py: 2,
+          flexShrink: 0,
           bgcolor: theme => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)')
         }}
       >
@@ -187,13 +188,13 @@ const TransactionsByTypeDialog = ({
 
       <Divider />
 
-      <DialogContent sx={{ p: 0, flex: 1, overflow: 'auto' }}>
+      <DialogContent sx={{ p: 0, flex: 1, overflow: 'auto', minHeight: 0 }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
         ) : transactions.length > 0 ? (
-          <Box sx={{ maxHeight: '60vh', overflow: 'auto' }}>
+          <Box>
             {transactions.map((transaction, index) => {
               const txConfig = typeConfig[transaction.type] || typeConfig.income
 
