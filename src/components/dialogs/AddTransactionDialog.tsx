@@ -15,9 +15,11 @@ import IconButton from '@mui/material/IconButton'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
+import VoiceTransactionButton from '@/components/VoiceTransactionButton'
 
 // Utils
 import { showSuccessToast, showErrorToast } from '@/utils/swal'
+import type { ParsedTransaction } from '@/utils/voiceTransactionParser'
 
 // Types
 import type {
@@ -151,6 +153,15 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
     }
   }
 
+  const handleVoiceParsed = (data: ParsedTransaction) => {
+    setFormData(prev => ({
+      ...prev,
+      ...(data.type && { type: data.type, savingsCategoryId: '', expenseCategoryId: '', fromStorageTypeId: '', toStorageTypeId: '' }),
+      ...(data.amount && { amount: formatRupiahInput(data.amount.toString()) }),
+      ...(data.description && { description: data.description })
+    }))
+  }
+
   return (
     <Dialog
       open={open}
@@ -165,7 +176,10 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
       }}
     >
       <DialogTitle className='flex items-center justify-between'>
-        <span>Tambah Transaksi</span>
+        <div className='flex items-center gap-2'>
+          <span>Tambah Transaksi</span>
+          <VoiceTransactionButton onParsed={handleVoiceParsed} />
+        </div>
         <IconButton onClick={onClose} size='small'>
           <i className='tabler-x' />
         </IconButton>

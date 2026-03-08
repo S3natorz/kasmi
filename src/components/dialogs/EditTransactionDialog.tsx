@@ -17,9 +17,11 @@ import Typography from '@mui/material/Typography'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
+import VoiceTransactionButton from '@/components/VoiceTransactionButton'
 
 // Utils
 import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
+import type { ParsedTransaction } from '@/utils/voiceTransactionParser'
 
 // Types
 import type {
@@ -170,6 +172,15 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
     }
   }
 
+  const handleVoiceParsed = (data: ParsedTransaction) => {
+    setFormData(prev => ({
+      ...prev,
+      ...(data.type && { type: data.type, savingsCategoryId: '', expenseCategoryId: '', fromStorageTypeId: '', toStorageTypeId: '' }),
+      ...(data.amount && { amount: formatRupiahInput(data.amount.toString()) }),
+      ...(data.description && { description: data.description })
+    }))
+  }
+
   if (!transaction) return null
 
   return (
@@ -186,7 +197,10 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
       }}
     >
       <DialogTitle className='flex items-center justify-between'>
-        <span>Edit Transaksi</span>
+        <div className='flex items-center gap-2'>
+          <span>Edit Transaksi</span>
+          <VoiceTransactionButton onParsed={handleVoiceParsed} />
+        </div>
         <IconButton onClick={onClose} size='small'>
           <i className='tabler-x' />
         </IconButton>
