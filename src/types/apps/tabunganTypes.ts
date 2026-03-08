@@ -52,7 +52,7 @@ export type StorageTypeType = {
 
 export type TransactionType = {
   id: string
-  type: 'income' | 'expense' | 'savings' | 'transfer'
+  type: 'income' | 'expense' | 'savings' | 'transfer' | 'gold_income'
   amount: number
   description?: string | null
   date: Date
