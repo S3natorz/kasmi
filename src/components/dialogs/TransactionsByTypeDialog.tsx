@@ -12,8 +12,6 @@ import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
-import useMediaQuery from '@mui/material/useMediaQuery'
-import { useTheme } from '@mui/material/styles'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -62,9 +60,6 @@ const TransactionsByTypeDialog = ({
 }: Props) => {
   const [transactions, setTransactions] = useState<TransactionType[]>([])
   const [loading, setLoading] = useState(false)
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-
   useEffect(() => {
     if (open) {
       fetchTransactions()
@@ -114,32 +109,18 @@ const TransactionsByTypeDialog = ({
       onClose={handleClose}
       maxWidth='sm'
       fullWidth
-      scroll='paper'
       PaperProps={{
         sx: {
           borderRadius: 3,
-          maxHeight: '90vh',
-          ...(isMobile && {
-            position: 'fixed',
-            bottom: 0,
-            m: 0,
-            borderBottomLeftRadius: 0,
-            borderBottomRightRadius: 0,
-            maxHeight: '85vh'
-          })
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }
       }}
-      sx={isMobile ? { '& .MuiDialog-container': { alignItems: 'flex-end' } } : undefined}
     >
-      {/* Sticky Header */}
-      <Box
-        sx={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          bgcolor: 'background.paper'
-        }}
-      >
+      {/* Fixed Header */}
+      <Box sx={{ flexShrink: 0 }}>
         <DialogTitle sx={{ p: 3, pb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -194,7 +175,8 @@ const TransactionsByTypeDialog = ({
         <Divider />
       </Box>
 
-      {/* Transaction List - scrolls naturally under sticky header */}
+      {/* Transaction List - scrollable area */}
+      <Box sx={{ flex: 1, overflowY: 'auto' }}>
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
           <CircularProgress />
@@ -331,6 +313,7 @@ const TransactionsByTypeDialog = ({
           </Typography>
         </Box>
       )}
+      </Box>
     </Dialog>
   )
 }
