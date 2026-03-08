@@ -66,27 +66,37 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
   const [savingsCategories, setSavingsCategories] = useState<SavingsCategoryType[]>([])
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryType[]>([])
   const [storageTypes, setStorageTypes] = useState<StorageTypeType[]>([])
+  const [txPatterns, setTxPatterns] = useState<Record<string, {
+    fromStorageTypeId: string
+    toStorageTypeId: string
+    expenseCategoryId: string
+    savingsCategoryId: string
+    descriptionToCategory: Record<string, string>
+  }>>({})
 
   const fetchReferenceData = async () => {
     try {
-      const [membersRes, savingsRes, expensesRes, storageRes] = await Promise.all([
+      const [membersRes, savingsRes, expensesRes, storageRes, patternsRes] = await Promise.all([
         fetch('/api/apps/tabungan/family-members'),
         fetch('/api/apps/tabungan/savings-categories'),
         fetch('/api/apps/tabungan/expense-categories'),
-        fetch('/api/apps/tabungan/storage-types')
+        fetch('/api/apps/tabungan/storage-types'),
+        fetch('/api/apps/tabungan/transaction-patterns')
       ])
 
-      const [members, savings, expenses, storages] = await Promise.all([
+      const [members, savings, expenses, storages, patterns] = await Promise.all([
         membersRes.json(),
         savingsRes.json(),
         expensesRes.json(),
-        storageRes.json()
+        storageRes.json(),
+        patternsRes.json()
       ])
 
       setFamilyMembers(Array.isArray(members) ? members : [])
       setSavingsCategories(Array.isArray(savings) ? savings : [])
       setExpenseCategories(Array.isArray(expenses) ? expenses : [])
       setStorageTypes(Array.isArray(storages) ? storages : [])
+      setTxPatterns(patterns && typeof patterns === 'object' ? patterns : {})
     } catch (error) {
       console.error('Failed to fetch reference data:', error)
     }
@@ -159,9 +169,10 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
     const storageItems = storageTypes.filter(s => !s.isGold).map(s => ({ id: s.id, name: s.name }))
     const expenseItems = expenseCategories.map(c => ({ id: c.id, name: c.name }))
     const savingsItems = savingsCategories.map(c => ({ id: c.id, name: c.name }))
+    const pattern = txPatterns[type]
 
     // Fuzzy match storage from voice hint
-    const matchedStorageId = data.storageHint ? fuzzyMatchName(data.storageHint, storageItems) : ''
+    let matchedStorageId = data.storageHint ? fuzzyMatchName(data.storageHint, storageItems) : ''
 
     // Fuzzy match category from voice hint
     let matchedExpenseCategoryId = ''
@@ -172,6 +183,52 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
         matchedExpenseCategoryId = fuzzyMatchName(data.categoryHint, expenseItems)
       } else if (type === 'savings') {
         matchedSavingsCategoryId = fuzzyMatchName(data.categoryHint, savingsItems)
+      }
+    }
+
+    // Auto-fill from description keywords if category not matched
+    if (pattern?.descriptionToCategory && data.description) {
+      const words = data.description.toLowerCase().split(/\s+/)
+
+      if (type === 'expense' && !matchedExpenseCategoryId) {
+        for (const word of words) {
+          const catId = pattern.descriptionToCategory[word]
+
+          if (catId && expenseItems.some(c => c.id === catId)) {
+            matchedExpenseCategoryId = catId
+            break
+          }
+        }
+      }
+
+      if (type === 'savings' && !matchedSavingsCategoryId) {
+        for (const word of words) {
+          const catId = pattern.descriptionToCategory[word]
+
+          if (catId && savingsItems.some(c => c.id === catId)) {
+            matchedSavingsCategoryId = catId
+            break
+          }
+        }
+      }
+    }
+
+    // Fallback to most frequently used patterns if not specified in voice
+    if (pattern) {
+      if (!matchedStorageId) {
+        if (type === 'income') {
+          matchedStorageId = pattern.toStorageTypeId || ''
+        } else {
+          matchedStorageId = pattern.fromStorageTypeId || ''
+        }
+      }
+
+      if (type === 'expense' && !matchedExpenseCategoryId) {
+        matchedExpenseCategoryId = pattern.expenseCategoryId || ''
+      }
+
+      if (type === 'savings' && !matchedSavingsCategoryId) {
+        matchedSavingsCategoryId = pattern.savingsCategoryId || ''
       }
     }
 

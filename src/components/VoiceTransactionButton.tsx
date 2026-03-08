@@ -133,9 +133,9 @@ const VoiceTransactionButton = ({ onParsed, lang = 'id-ID' }: Props) => {
 
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
             {isListening
-              ? 'Contoh: "pengeluaran 50 ribu beli nasi goreng"'
+              ? 'Contoh: "pengeluaran 50 ribu beli nasi goreng dari BSI kategori dapur"'
               : !parsed && !error
-                ? 'Ucapkan jenis, jumlah, dan keterangan transaksi'
+                ? 'Ucapkan jenis, jumlah, keterangan, simpanan, dan kategori'
                 : ''}
           </Typography>
 
