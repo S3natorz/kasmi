@@ -18,6 +18,8 @@ import Tooltip from '@mui/material/Tooltip'
 import Collapse from '@mui/material/Collapse'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
+import SpeedDial from '@mui/material/SpeedDial'
+import SpeedDialAction from '@mui/material/SpeedDialAction'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -28,6 +30,7 @@ import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsD
 import TransactionsByTypeDialog from '@/components/dialogs/TransactionsByTypeDialog'
 import ExpenseCategoryTransactionsDialog from '@/components/dialogs/ExpenseCategoryTransactionsDialog'
 import EditTransactionDialog from '@/components/dialogs/EditTransactionDialog'
+import VoiceTransactionButton from '@/components/VoiceTransactionButton'
 
 import type { TransactionFilterType } from '@/components/dialogs/TransactionsByTypeDialog'
 
@@ -124,6 +127,8 @@ const TabunganDashboard = () => {
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [openAddDialog, setOpenAddDialog] = useState(false)
+  const [openVoiceDialog, setOpenVoiceDialog] = useState(false)
+  const [voiceParsedData, setVoiceParsedData] = useState<any>(null)
   const [openStorageDialog, setOpenStorageDialog] = useState(false)
   const [selectedStorage, setSelectedStorage] = useState<StorageTypeType | null>(null)
 
@@ -1090,35 +1095,68 @@ const TabunganDashboard = () => {
         </Card>
       </Grid>
 
-      {/* Floating Action Button - Tambah Transaksi */}
-      <Tooltip title='Tambah Transaksi' placement='left'>
-        <Fab
-          color='error'
-          size='small'
-          aria-label='tambah transaksi'
-          onClick={() => setOpenAddDialog(true)}
-          sx={{
-            position: 'fixed',
-            bottom: { xs: 5, sm: 28 },
-            right: { xs: 40, sm: 75 },
-            zIndex: 1000,
-            boxShadow: 3,
+      {/* Floating Speed Dial - Tambah Transaksi */}
+      <SpeedDial
+        ariaLabel='Tambah Transaksi'
+        icon={<i className='tabler-plus text-base' />}
+        sx={{
+          position: 'fixed',
+          bottom: { xs: 5, sm: 28 },
+          right: { xs: 40, sm: 75 },
+          zIndex: 1000,
+          '& .MuiFab-primary': {
+            bgcolor: 'error.main',
+            color: 'white',
             width: 44,
             height: 44,
             minHeight: 44,
+            boxShadow: 3,
             '&:hover': {
+              bgcolor: 'error.dark',
               transform: 'scale(1.1)',
               boxShadow: 6
             },
             transition: 'all 0.2s ease-in-out'
+          }
+        }}
+      >
+        <SpeedDialAction
+          icon={<i className='tabler-pencil' style={{ fontSize: '1.1rem' }} />}
+          tooltipTitle='Ketik Manual'
+          onClick={() => setOpenAddDialog(true)}
+          FabProps={{ size: 'small' }}
+        />
+        <SpeedDialAction
+          icon={<i className='tabler-microphone' style={{ fontSize: '1.1rem' }} />}
+          tooltipTitle='Input Suara'
+          onClick={() => setOpenVoiceDialog(true)}
+          FabProps={{ size: 'small' }}
+        />
+      </SpeedDial>
+
+      {/* Standalone Voice Dialog from dashboard */}
+      {openVoiceDialog && (
+        <VoiceTransactionButton
+          autoOpen
+          onParsed={(data) => {
+            setVoiceParsedData(data)
+            setOpenVoiceDialog(false)
+            setOpenAddDialog(true)
           }}
-        >
-          <i className='tabler-plus text-base' />
-        </Fab>
-      </Tooltip>
+          onClose={() => setOpenVoiceDialog(false)}
+        />
+      )}
 
       {/* Add Transaction Dialog */}
-      <AddTransactionDialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} onSuccess={fetchStats} />
+      <AddTransactionDialog
+        open={openAddDialog}
+        onClose={() => {
+          setOpenAddDialog(false)
+          setVoiceParsedData(null)
+        }}
+        onSuccess={fetchStats}
+        initialVoiceData={voiceParsedData}
+      />
 
       {/* Storage Transactions Dialog */}
       <StorageTransactionsDialog

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
@@ -15,6 +15,8 @@ import type { ParsedTransaction } from '@/utils/voiceTransactionParser'
 
 type Props = {
   onParsed: (data: ParsedTransaction) => void
+  onClose?: () => void
+  autoOpen?: boolean
   lang?: string
 }
 
@@ -30,8 +32,8 @@ const typeLabels: Record<string, string> = {
   transfer: 'Transfer'
 }
 
-const VoiceTransactionButton = ({ onParsed, lang = 'id-ID' }: Props) => {
-  const [showDialog, setShowDialog] = useState(false)
+const VoiceTransactionButton = ({ onParsed, onClose: onCloseProp, autoOpen = false, lang = 'id-ID' }: Props) => {
+  const [showDialog, setShowDialog] = useState(autoOpen)
   const [parsed, setParsed] = useState<ParsedTransaction | null>(null)
 
   const { isListening, isSupported, transcript, error, toggleListening, stopListening } = useVoiceInput({
@@ -47,6 +49,14 @@ const VoiceTransactionButton = ({ onParsed, lang = 'id-ID' }: Props) => {
     }, [])
   })
 
+  // Auto-start listening when autoOpen
+  useEffect(() => {
+    if (autoOpen && isSupported) {
+      toggleListening()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen])
+
   const handleOpen = () => {
     setParsed(null)
     setShowDialog(true)
@@ -56,6 +66,7 @@ const VoiceTransactionButton = ({ onParsed, lang = 'id-ID' }: Props) => {
     stopListening()
     setParsed(null)
     setShowDialog(false)
+    onCloseProp?.()
   }
 
   const handleApply = () => {
@@ -74,18 +85,20 @@ const VoiceTransactionButton = ({ onParsed, lang = 'id-ID' }: Props) => {
 
   return (
     <>
-      <Tooltip title='Input dengan suara'>
-        <IconButton
-          onClick={handleOpen}
-          color='primary'
-          sx={{
-            bgcolor: 'primary.lighter',
-            '&:hover': { bgcolor: 'primary.light' }
-          }}
-        >
-          <i className='tabler-microphone' />
-        </IconButton>
-      </Tooltip>
+      {!autoOpen && (
+        <Tooltip title='Input dengan suara'>
+          <IconButton
+            onClick={handleOpen}
+            color='primary'
+            sx={{
+              bgcolor: 'primary.lighter',
+              '&:hover': { bgcolor: 'primary.light' }
+            }}
+          >
+            <i className='tabler-microphone' />
+          </IconButton>
+        </Tooltip>
+      )}
 
       <Dialog
         open={showDialog}

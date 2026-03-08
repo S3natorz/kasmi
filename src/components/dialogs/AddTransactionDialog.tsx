@@ -34,6 +34,7 @@ type Props = {
   open: boolean
   onClose: () => void
   onSuccess?: () => void
+  initialVoiceData?: ParsedTransaction | null
 }
 
 // Format number with thousand separator (dots)
@@ -47,7 +48,7 @@ const parseRupiahInput = (value: string) => {
   return value.replace(/\./g, '')
 }
 
-const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
+const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Props) => {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     type: 'income' as 'income' | 'expense' | 'savings' | 'transfer',
@@ -102,6 +103,8 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
     }
   }
 
+  const [pendingVoiceData, setPendingVoiceData] = useState<ParsedTransaction | null>(null)
+
   useEffect(() => {
     if (open) {
       fetchReferenceData()
@@ -117,8 +120,21 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
         fromStorageTypeId: '',
         toStorageTypeId: ''
       })
+
+      if (initialVoiceData) {
+        setPendingVoiceData(initialVoiceData)
+      }
     }
-  }, [open])
+  }, [open, initialVoiceData])
+
+  // Apply voice data after reference data is loaded
+  useEffect(() => {
+    if (pendingVoiceData && storageTypes.length > 0) {
+      handleVoiceParsed(pendingVoiceData)
+      setPendingVoiceData(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingVoiceData, storageTypes])
 
   const handleSubmit = async () => {
     try {
