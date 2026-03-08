@@ -14,6 +14,8 @@ type ParsedTransaction = {
   type?: 'income' | 'expense' | 'savings' | 'transfer'
   amount?: number
   description?: string
+  storageHint?: string
+  categoryHint?: string
 }
 
 const typeKeywords: Record<string, 'income' | 'expense' | 'savings' | 'transfer'> = {
@@ -250,12 +252,70 @@ function parseAmount(text: string): { amount: number; usedTokens: number[] } | n
   return { amount, usedTokens: usedIndices }
 }
 
+/**
+ * Extract storage hint from phrases like:
+ *   "dari BSI", "dari bank BCA", "dari dompet", "ke dana", "ke bank mandiri"
+ */
+function extractStorageHint(text: string): { hint: string; cleaned: string } | null {
+  // Match "dari <name>" or "ke <name>" patterns for storage
+  const patterns = [
+    /\b(?:dari|ambil dari|dari simpanan|dari rekening|dari bank)\s+(.+?)(?:\s+(?:kategori|untuk|buat)\b|$)/i,
+    /\b(?:ke|masuk ke|ke simpanan|ke rekening|ke bank)\s+(.+?)(?:\s+(?:kategori|untuk|buat)\b|$)/i
+  ]
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+
+    if (match) {
+      const hint = match[1].trim()
+        .replace(/\s+(kategori|untuk|buat).*$/i, '')
+        .trim()
+
+      if (hint) {
+        const cleaned = text.replace(match[0], ' ').trim()
+
+        return { hint, cleaned }
+      }
+    }
+  }
+
+  return null
+}
+
+/**
+ * Extract category hint from phrases like:
+ *   "kategori makanan", "untuk transportasi", "buat belanja"
+ */
+function extractCategoryHint(text: string): { hint: string; cleaned: string } | null {
+  const patterns = [
+    /\b(?:kategori|kategori pengeluaran|kategori tabungan)\s+(.+?)$/i,
+    /\b(?:untuk|buat|jenis)\s+(.+?)(?:\s+(?:dari|ke)\b|$)/i
+  ]
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+
+    if (match) {
+      const hint = match[1].trim()
+
+      if (hint) {
+        const cleaned = text.replace(match[0], ' ').trim()
+
+        return { hint, cleaned }
+      }
+    }
+  }
+
+  return null
+}
+
 export function parseVoiceTransaction(text: string): ParsedTransaction {
   const result: ParsedTransaction = {}
-  const lowerText = text.toLowerCase().trim()
-  const tokens = lowerText.split(/\s+/)
+  let workingText = text.toLowerCase().trim()
 
   // 1. Detect transaction type
+  const tokens = workingText.split(/\s+/)
+
   for (const token of tokens) {
     if (token in typeKeywords) {
       result.type = typeKeywords[token]
@@ -263,18 +323,33 @@ export function parseVoiceTransaction(text: string): ParsedTransaction {
     }
   }
 
-  // 2. Parse amount
-  const amountResult = parseAmount(lowerText)
+  // 2. Extract storage hint (before amount parsing to avoid interference)
+  const storageResult = extractStorageHint(workingText)
+
+  if (storageResult) {
+    result.storageHint = storageResult.hint
+    workingText = storageResult.cleaned
+  }
+
+  // 3. Extract category hint
+  const categoryResult = extractCategoryHint(workingText)
+
+  if (categoryResult) {
+    result.categoryHint = categoryResult.hint
+    workingText = categoryResult.cleaned
+  }
+
+  // 4. Parse amount
+  const finalTokens = workingText.split(/\s+/)
+  const amountResult = parseAmount(workingText)
 
   if (amountResult) {
     result.amount = amountResult.amount
 
-    // 3. Extract description = everything that's not type keyword or amount tokens
-    const descTokens = tokens.filter((token, i) => {
+    // 5. Extract description = everything that's not type keyword, amount, or extracted hints
+    const descTokens = finalTokens.filter((token, i) => {
       if (token in typeKeywords) return false
       if (amountResult.usedTokens.includes(i)) return false
-
-      // Filter out multiplier words that might not be in usedTokens
       if (['ribu', 'rb', 'juta', 'jt', 'ratus', 'miliar', 'milyar'].includes(token)) return false
 
       return true
@@ -284,8 +359,7 @@ export function parseVoiceTransaction(text: string): ParsedTransaction {
       result.description = descTokens.join(' ').replace(/^\s+|\s+$/g, '').replace(/^[-,.\s]+|[-,.\s]+$/g, '')
     }
   } else {
-    // No amount found — try to get description from everything except type keyword
-    const descTokens = tokens.filter(token => !(token in typeKeywords))
+    const descTokens = finalTokens.filter(token => !(token in typeKeywords))
 
     if (descTokens.length > 0) {
       result.description = descTokens.join(' ')
@@ -293,6 +367,53 @@ export function parseVoiceTransaction(text: string): ParsedTransaction {
   }
 
   return result
+}
+
+/**
+ * Fuzzy match a voice hint against a list of named items.
+ * Returns the ID of the best match, or empty string if no match.
+ */
+export function fuzzyMatchName(hint: string, items: { id: string; name: string }[]): string {
+  if (!hint || items.length === 0) return ''
+
+  const h = hint.toLowerCase().trim()
+
+  // 1. Exact match
+  const exact = items.find(item => item.name.toLowerCase() === h)
+
+  if (exact) return exact.id
+
+  // 2. Item name contains hint or hint contains item name
+  const contains = items.find(
+    item => item.name.toLowerCase().includes(h) || h.includes(item.name.toLowerCase())
+  )
+
+  if (contains) return contains.id
+
+  // 3. Word overlap scoring
+  const hintWords = h.split(/\s+/)
+  let bestScore = 0
+  let bestId = ''
+
+  for (const item of items) {
+    const nameWords = item.name.toLowerCase().split(/\s+/)
+    let score = 0
+
+    for (const hw of hintWords) {
+      for (const nw of nameWords) {
+        if (nw.includes(hw) || hw.includes(nw)) {
+          score += 1
+        }
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score
+      bestId = item.id
+    }
+  }
+
+  return bestScore > 0 ? bestId : ''
 }
 
 export type { ParsedTransaction }

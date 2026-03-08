@@ -209,6 +209,24 @@ const VoiceTransactionButton = ({ onParsed, lang = 'id-ID' }: Props) => {
                   />
                 )}
               </Box>
+              {parsed.storageHint && (
+                <Chip
+                  label={`Simpanan: ${parsed.storageHint}`}
+                  variant='outlined'
+                  size='small'
+                  icon={<i className='tabler-building-bank' style={{ fontSize: '1rem' }} />}
+                  sx={{ mb: 0.5 }}
+                />
+              )}
+              {parsed.categoryHint && (
+                <Chip
+                  label={`Kategori: ${parsed.categoryHint}`}
+                  variant='outlined'
+                  size='small'
+                  icon={<i className='tabler-tag' style={{ fontSize: '1rem' }} />}
+                  sx={{ mb: 0.5 }}
+                />
+              )}
               {parsed.description && (
                 <Typography variant='body2' color='text.secondary'>
                   Keterangan: <strong>{parsed.description}</strong>
