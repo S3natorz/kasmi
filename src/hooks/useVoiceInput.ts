@@ -41,6 +41,8 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
   const recognitionRef = useRef<SpeechRecognitionInstance>(null)
   const onResultRef = useRef(onResult)
   const onErrorRef = useRef(onError)
+  const lastTranscriptRef = useRef('')
+  const hadFinalResultRef = useRef(false)
 
   // Keep refs updated
   onResultRef.current = onResult
@@ -75,6 +77,8 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
     recognition.maxAlternatives = 1
 
     recognition.onstart = () => {
+      lastTranscriptRef.current = ''
+      hadFinalResultRef.current = false
       setState(prev => ({ ...prev, isListening: true, error: null, transcript: '' }))
     }
 
@@ -94,6 +98,12 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
       }
 
       const transcript = finalTranscript || interimTranscript
+      lastTranscriptRef.current = transcript
+
+      if (finalTranscript) {
+        hadFinalResultRef.current = true
+      }
+
       setState(prev => ({ ...prev, transcript }))
       onResultRef.current?.(transcript, !!finalTranscript)
     }
@@ -126,6 +136,12 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
     }
 
     recognition.onend = () => {
+      // On mobile browsers, isFinal may never be true.
+      // When recognition ends and we have a transcript that was never finalized, treat it as final.
+      if (!hadFinalResultRef.current && lastTranscriptRef.current) {
+        onResultRef.current?.(lastTranscriptRef.current, true)
+      }
+
       setState(prev => ({ ...prev, isListening: false }))
       recognitionRef.current = null
     }
