@@ -259,8 +259,8 @@ function parseAmount(text: string): { amount: number; usedTokens: number[] } | n
 function extractStorageHint(text: string): { hint: string; cleaned: string } | null {
   // Match "dari <name>" or "ke <name>" patterns for storage
   const patterns = [
-    /\b(?:dari|ambil dari|dari simpanan|dari rekening|dari bank)\s+(.+?)(?:\s+(?:kategori|untuk|buat)\b|$)/i,
-    /\b(?:ke|masuk ke|ke simpanan|ke rekening|ke bank)\s+(.+?)(?:\s+(?:kategori|untuk|buat)\b|$)/i
+    /\b(?:dari|ambil dari|dari simpanan|dari rekening|dari bank)\s+(.+?)(?=\s+(?:kategori|untuk|buat)\b|$)/i,
+    /\b(?:ke|masuk ke|ke simpanan|ke rekening|ke bank)\s+(.+?)(?=\s+(?:kategori|untuk|buat)\b|$)/i
   ]
 
   for (const pattern of patterns) {
