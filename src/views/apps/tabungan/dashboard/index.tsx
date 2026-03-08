@@ -1103,7 +1103,7 @@ const TabunganDashboard = () => {
         sx={{
           position: 'fixed',
           bottom: { xs: 5, sm: 28 },
-          left: { xs: 20, sm: 75 },
+          right: { xs: 40, sm: 75 },
           zIndex: 1000,
           '& .MuiFab-primary': {
             bgcolor: 'error.main',
