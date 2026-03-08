@@ -16,14 +16,16 @@ type VoiceInputState = {
   error: string | null
 }
 
-// Extend Window for SpeechRecognition
-type SpeechRecognitionType = new () => SpeechRecognition
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SpeechRecognitionInstance = any
 
-declare global {
-  interface Window {
-    SpeechRecognition?: SpeechRecognitionType
-    webkitSpeechRecognition?: SpeechRecognitionType
-  }
+function getSpeechRecognitionAPI(): (new () => SpeechRecognitionInstance) | null {
+  if (typeof window === 'undefined') return null
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = window as any
+
+  return w.SpeechRecognition || w.webkitSpeechRecognition || null
 }
 
 export function useVoiceInput(options: VoiceInputOptions = {}) {
@@ -36,7 +38,7 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
     error: null
   })
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<SpeechRecognitionInstance>(null)
   const onResultRef = useRef(onResult)
   const onErrorRef = useRef(onError)
 
@@ -46,15 +48,13 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
 
   // Check support on mount
   useEffect(() => {
-    const isSupported = typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition)
+    const isSupported = !!getSpeechRecognitionAPI()
 
     setState(prev => ({ ...prev, isSupported }))
   }, [])
 
   const startListening = useCallback(() => {
-    if (typeof window === 'undefined') return
-
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition
+    const SpeechRecognitionAPI = getSpeechRecognitionAPI()
 
     if (!SpeechRecognitionAPI) {
       const errMsg = 'Browser tidak mendukung speech recognition'
@@ -78,7 +78,8 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
       setState(prev => ({ ...prev, isListening: true, error: null, transcript: '' }))
     }
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
       let finalTranscript = ''
       let interimTranscript = ''
 
@@ -97,7 +98,8 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
       onResultRef.current?.(transcript, !!finalTranscript)
     }
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onerror = (event: any) => {
       let errMsg = 'Terjadi kesalahan'
 
       switch (event.error) {
