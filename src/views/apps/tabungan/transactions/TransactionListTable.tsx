@@ -111,6 +111,7 @@ const parseRupiahInput = (value: string) => {
 
 const typeConfig: Record<string, { label: string; color: ThemeColor; icon: string }> = {
   income: { label: 'Pemasukan', color: 'success', icon: 'tabler-arrow-up' },
+  gold_income: { label: 'Pemasukan Emas', color: 'warning', icon: 'tabler-diamond' },
   expense: { label: 'Pengeluaran', color: 'error', icon: 'tabler-arrow-down' },
   savings: { label: 'Tabungan', color: 'info', icon: 'tabler-coin' },
   transfer: { label: 'Transfer', color: 'warning', icon: 'tabler-transfer' }
@@ -130,7 +131,7 @@ const TransactionListTable = () => {
 
   // Form states
   const [formData, setFormData] = useState({
-    type: 'income' as 'income' | 'expense' | 'savings' | 'transfer',
+    type: 'income' as 'income' | 'expense' | 'savings' | 'transfer' | 'gold_income',
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
@@ -328,14 +329,17 @@ const TransactionListTable = () => {
             color={
               row.original.type === 'income'
                 ? 'success.main'
-                : row.original.type === 'expense'
-                  ? 'error.main'
-                  : 'info.main'
+                : row.original.type === 'gold_income'
+                  ? 'warning.main'
+                  : row.original.type === 'expense'
+                    ? 'error.main'
+                    : 'info.main'
             }
             fontWeight={500}
           >
-            {row.original.type === 'income' ? '+' : '-'}
-            {formatCurrency(row.original.amount)}
+            {row.original.type === 'gold_income'
+              ? `+${row.original.amount}g`
+              : `${row.original.type === 'income' ? '+' : '-'}${formatCurrency(row.original.amount)}`}
           </Typography>
         )
       }),
@@ -444,6 +448,7 @@ const TransactionListTable = () => {
             >
               <MenuItem value=''>Semua Tipe</MenuItem>
               <MenuItem value='income'>Pemasukan</MenuItem>
+              <MenuItem value='gold_income'>Pemasukan Emas</MenuItem>
               <MenuItem value='expense'>Pengeluaran</MenuItem>
               <MenuItem value='savings'>Tabungan</MenuItem>
               <MenuItem value='transfer'>Transfer</MenuItem>
@@ -575,6 +580,7 @@ const TransactionListTable = () => {
                 onChange={e => setFormData({ ...formData, type: e.target.value as any })}
               >
                 <MenuItem value='income'>Pemasukan</MenuItem>
+                <MenuItem value='gold_income'>Pemasukan Emas</MenuItem>
                 <MenuItem value='expense'>Pengeluaran</MenuItem>
                 <MenuItem value='savings'>Tabungan</MenuItem>
                 <MenuItem value='transfer'>Transfer</MenuItem>
@@ -710,9 +716,27 @@ const TransactionListTable = () => {
                   onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
                 >
                   <MenuItem value=''>Pilih Tujuan</MenuItem>
-                  {storageTypes.map(st => (
+                  {storageTypes.filter(st => !st.isGold).map(st => (
                     <MenuItem key={st.id} value={st.id}>
                       {st.name} ({formatCurrency(st.balance || 0)})
+                    </MenuItem>
+                  ))}
+                </CustomTextField>
+              </Grid>
+            )}
+            {formData.type === 'gold_income' && (
+              <Grid size={{ xs: 12 }}>
+                <CustomTextField
+                  select
+                  fullWidth
+                  label='Masuk ke Simpanan Emas'
+                  value={formData.toStorageTypeId}
+                  onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
+                >
+                  <MenuItem value=''>Pilih Simpanan Emas</MenuItem>
+                  {storageTypes.filter(st => st.isGold).map(st => (
+                    <MenuItem key={st.id} value={st.id}>
+                      {st.name} ({(st.goldWeight || 0).toFixed(2)}g)
                     </MenuItem>
                   ))}
                 </CustomTextField>

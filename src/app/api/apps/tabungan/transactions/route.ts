@@ -16,6 +16,22 @@ async function updateStorageBalance(storageTypeId: string, amount: number, isAdd
   }
 }
 
+// Helper function to update gold weight on storage
+async function updateGoldWeight(storageTypeId: string, grams: number, isAdd: boolean) {
+  const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
+  if (storage) {
+    const currentWeight = storage.goldWeight || 0
+    const newWeight = isAdd ? currentWeight + grams : currentWeight - grams
+    console.log(`Updating gold ${storage.name}: ${currentWeight}g ${isAdd ? '+' : '-'} ${grams}g = ${newWeight}g`)
+    await prisma.storageType.update({
+      where: { id: storageTypeId },
+      data: { goldWeight: Math.max(0, newWeight) }
+    })
+  } else {
+    console.log(`Storage not found: ${storageTypeId}`)
+  }
+}
+
 // GET - Get all transactions with filters
 export async function GET(request: Request) {
   try {
@@ -80,7 +96,13 @@ export async function POST(request: Request) {
     // 3. Savings (Tabungan) -> mengambil dari fromStorageType
     // 4. Transfer -> dari fromStorageType ke toStorageType
 
-    if (body.type === 'income') {
+    if (body.type === 'gold_income') {
+      if (body.toStorageTypeId && body.toStorageTypeId !== '') {
+        const grams = parseFloat(body.goldGrams) || amount
+        console.log('Gold Income: Adding', grams, 'grams to storage', body.toStorageTypeId)
+        await updateGoldWeight(body.toStorageTypeId, grams, true)
+      }
+    } else if (body.type === 'income') {
       if (body.toStorageTypeId && body.toStorageTypeId !== '') {
         console.log('Income: Adding to storage', body.toStorageTypeId)
         await updateStorageBalance(body.toStorageTypeId, amount, true)
@@ -146,7 +168,9 @@ export async function PUT(request: Request) {
 
     if (oldTx) {
       // Reverse old transaction effect
-      if (oldTx.type === 'income' && oldTx.toStorageTypeId) {
+      if (oldTx.type === 'gold_income' && oldTx.toStorageTypeId) {
+        await updateGoldWeight(oldTx.toStorageTypeId, oldTx.amount, false)
+      } else if (oldTx.type === 'income' && oldTx.toStorageTypeId) {
         await updateStorageBalance(oldTx.toStorageTypeId, oldTx.amount, false)
       } else if (oldTx.type === 'expense' && oldTx.fromStorageTypeId) {
         await updateStorageBalance(oldTx.fromStorageTypeId, oldTx.amount, true)
@@ -159,7 +183,10 @@ export async function PUT(request: Request) {
     }
 
     // Apply new transaction effect
-    if (body.type === 'income' && body.toStorageTypeId) {
+    if (body.type === 'gold_income' && body.toStorageTypeId) {
+      const grams = parseFloat(body.goldGrams) || newAmount
+      await updateGoldWeight(body.toStorageTypeId, grams, true)
+    } else if (body.type === 'income' && body.toStorageTypeId) {
       await updateStorageBalance(body.toStorageTypeId, newAmount, true)
     } else if (body.type === 'expense' && body.fromStorageTypeId) {
       await updateStorageBalance(body.fromStorageTypeId, newAmount, false)
@@ -213,7 +240,9 @@ export async function DELETE(request: Request) {
 
     if (tx) {
       // Reverse transaction effect before deleting
-      if (tx.type === 'income' && tx.toStorageTypeId) {
+      if (tx.type === 'gold_income' && tx.toStorageTypeId) {
+        await updateGoldWeight(tx.toStorageTypeId, tx.amount, false)
+      } else if (tx.type === 'income' && tx.toStorageTypeId) {
         await updateStorageBalance(tx.toStorageTypeId, tx.amount, false)
       } else if (tx.type === 'expense' && tx.fromStorageTypeId) {
         await updateStorageBalance(tx.fromStorageTypeId, tx.amount, true)

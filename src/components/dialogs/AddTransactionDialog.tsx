@@ -51,8 +51,9 @@ const parseRupiahInput = (value: string) => {
 const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Props) => {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    type: 'income' as 'income' | 'expense' | 'savings' | 'transfer',
+    type: 'income' as 'income' | 'expense' | 'savings' | 'transfer' | 'gold_income',
     amount: '',
+    goldGrams: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
     familyMemberId: '',
@@ -112,6 +113,7 @@ const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Pr
       setFormData({
         type: 'income',
         amount: '',
+        goldGrams: '',
         description: '',
         date: new Date().toISOString().split('T')[0],
         familyMemberId: '',
@@ -141,7 +143,8 @@ const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Pr
       setLoading(true)
       const submitData = {
         ...formData,
-        amount: parseRupiahInput(formData.amount)
+        amount: formData.type === 'gold_income' ? formData.goldGrams : parseRupiahInput(formData.amount),
+        ...(formData.type === 'gold_income' && { goldGrams: parseFloat(formData.goldGrams) || 0 })
       }
 
       const response = await fetch('/api/apps/tabungan/transactions', {
@@ -175,6 +178,8 @@ const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Pr
         return 'Tabungan'
       case 'transfer':
         return 'Transfer'
+      case 'gold_income':
+        return 'Pemasukan Emas'
       default:
         return ''
     }
@@ -306,24 +311,45 @@ const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Pr
               <MenuItem value='expense'>Pengeluaran</MenuItem>
               <MenuItem value='savings'>Tabungan</MenuItem>
               <MenuItem value='transfer'>Transfer</MenuItem>
+              <MenuItem value='gold_income'>Pemasukan Emas</MenuItem>
             </CustomTextField>
           </Grid>
 
           {/* Jumlah */}
-          <Grid size={{ xs: 12 }}>
-            <CustomTextField
-              fullWidth
-              label='Jumlah (Rp)'
-              value={formData.amount}
-              onChange={e => setFormData({ ...formData, amount: formatRupiahInput(e.target.value) })}
-              placeholder='0'
-              slotProps={{
-                input: {
-                  startAdornment: <span className='mr-1'>Rp</span>
-                }
-              }}
-            />
-          </Grid>
+          {formData.type === 'gold_income' ? (
+            <Grid size={{ xs: 12 }}>
+              <CustomTextField
+                fullWidth
+                label='Berat Emas (gram)'
+                value={formData.goldGrams}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.')
+                  setFormData({ ...formData, goldGrams: val })
+                }}
+                placeholder='0.00'
+                slotProps={{
+                  input: {
+                    endAdornment: <span className='ml-1 text-sm'>gram</span>
+                  }
+                }}
+              />
+            </Grid>
+          ) : (
+            <Grid size={{ xs: 12 }}>
+              <CustomTextField
+                fullWidth
+                label='Jumlah (Rp)'
+                value={formData.amount}
+                onChange={e => setFormData({ ...formData, amount: formatRupiahInput(e.target.value) })}
+                placeholder='0'
+                slotProps={{
+                  input: {
+                    startAdornment: <span className='mr-1'>Rp</span>
+                  }
+                }}
+              />
+            </Grid>
+          )}
 
           {/* Keterangan */}
           <Grid size={{ xs: 12 }}>
@@ -385,6 +411,31 @@ const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Pr
                   .map(storage => (
                     <MenuItem key={storage.id} value={storage.id}>
                       {storage.name}
+                    </MenuItem>
+                  ))}
+              </CustomTextField>
+            </Grid>
+          )}
+
+          {/* Masuk ke Simpanan Emas (untuk gold_income) */}
+          {formData.type === 'gold_income' && (
+            <Grid size={{ xs: 12 }}>
+              <CustomTextField
+                select
+                fullWidth
+                required
+                label='Masuk ke Simpanan Emas'
+                value={formData.toStorageTypeId}
+                onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
+                error={!formData.toStorageTypeId}
+                helperText={!formData.toStorageTypeId ? 'Pilih simpanan emas tujuan' : ''}
+              >
+                <MenuItem value=''>-- Pilih Simpanan Emas --</MenuItem>
+                {storageTypes
+                  .filter(s => s.isGold)
+                  .map(storage => (
+                    <MenuItem key={storage.id} value={storage.id}>
+                      {storage.name} ({(storage.goldWeight || 0).toFixed(2)} gram)
                     </MenuItem>
                   ))}
               </CustomTextField>
@@ -515,8 +566,9 @@ const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Pr
           onClick={handleSubmit}
           disabled={
             loading ||
-            !formData.amount ||
+            (formData.type === 'gold_income' ? !formData.goldGrams : !formData.amount) ||
             (formData.type === 'income' && !formData.toStorageTypeId) ||
+            (formData.type === 'gold_income' && !formData.toStorageTypeId) ||
             ((formData.type === 'expense' || formData.type === 'savings') && !formData.fromStorageTypeId) ||
             (formData.type === 'expense' && !formData.expenseCategoryId) ||
             (formData.type === 'transfer' && (!formData.fromStorageTypeId || !formData.toStorageTypeId))

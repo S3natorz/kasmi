@@ -892,7 +892,7 @@ const TabunganDashboard = () => {
               const recentTxns = stats.recentTransactions
               const counts = {
                 all: recentTxns.length,
-                income: recentTxns.filter((t: any) => t.type === 'income').length,
+                income: recentTxns.filter((t: any) => t.type === 'income' || t.type === 'gold_income').length,
                 expense: recentTxns.filter((t: any) => t.type === 'expense').length,
                 savings: recentTxns.filter((t: any) => t.type === 'savings').length,
                 transfer: recentTxns.filter((t: any) => t.type === 'transfer').length
@@ -943,13 +943,21 @@ const TabunganDashboard = () => {
                 const filtered =
                   recentFilter === 'all'
                     ? stats.recentTransactions
-                    : stats.recentTransactions.filter((t: any) => t.type === recentFilter)
+                    : recentFilter === 'income'
+                      ? stats.recentTransactions.filter((t: any) => t.type === 'income' || t.type === 'gold_income')
+                      : stats.recentTransactions.filter((t: any) => t.type === recentFilter)
 
                 return filtered.length > 0 ? (
                   filtered.slice(0, 10).map((transaction: any, index: number) => {
                   // Get storage info based on transaction type
                   const getStorageInfo = () => {
-                    if (transaction.type === 'income' && transaction.toStorageType) {
+                    if (transaction.type === 'gold_income' && transaction.toStorageType) {
+                      return {
+                        label: 'ke',
+                        name: transaction.toStorageType.name,
+                        color: transaction.toStorageType.color
+                      }
+                    } else if (transaction.type === 'income' && transaction.toStorageType) {
                       return {
                         label: 'ke',
                         name: transaction.toStorageType.name,
@@ -1005,11 +1013,13 @@ const TabunganDashboard = () => {
                           color={
                             transaction.type === 'income'
                               ? 'success'
-                              : transaction.type === 'expense'
-                                ? 'error'
-                                : transaction.type === 'transfer'
-                                  ? 'warning'
-                                  : 'info'
+                              : transaction.type === 'gold_income'
+                                ? 'warning'
+                                : transaction.type === 'expense'
+                                  ? 'error'
+                                  : transaction.type === 'transfer'
+                                    ? 'warning'
+                                    : 'info'
                           }
                           variant='rounded'
                           size={44}
@@ -1019,11 +1029,13 @@ const TabunganDashboard = () => {
                             className={
                               transaction.type === 'income'
                                 ? 'tabler-arrow-up'
-                                : transaction.type === 'expense'
-                                  ? 'tabler-arrow-down'
-                                  : transaction.type === 'transfer'
-                                    ? 'tabler-transfer'
-                                    : 'tabler-coin'
+                                : transaction.type === 'gold_income'
+                                  ? 'tabler-diamond'
+                                  : transaction.type === 'expense'
+                                    ? 'tabler-arrow-down'
+                                    : transaction.type === 'transfer'
+                                      ? 'tabler-transfer'
+                                      : 'tabler-coin'
                             }
                           />
                         </CustomAvatar>
@@ -1050,18 +1062,22 @@ const TabunganDashboard = () => {
                             color:
                               transaction.type === 'income'
                                 ? 'success.main'
-                                : transaction.type === 'expense'
-                                  ? 'error.main'
-                                  : transaction.type === 'transfer'
-                                    ? 'warning.main'
-                                    : 'info.main',
+                                : transaction.type === 'gold_income'
+                                  ? 'warning.main'
+                                  : transaction.type === 'expense'
+                                    ? 'error.main'
+                                    : transaction.type === 'transfer'
+                                      ? 'warning.main'
+                                      : 'info.main',
                             whiteSpace: 'nowrap',
                             letterSpacing: hideBalances ? '1px' : 'normal'
                           }}
                         >
                           {hideBalances
                             ? '••••••••'
-                            : `${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}`}
+                            : transaction.type === 'gold_income'
+                              ? `+${transaction.amount}g`
+                              : `${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}`}
                         </Typography>
                         {storageInfo && (
                           <Typography
