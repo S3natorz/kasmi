@@ -114,13 +114,11 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
       onClose={handleClose}
       maxWidth='sm'
       fullWidth
+      scroll='paper'
       PaperProps={{
         sx: {
           borderRadius: 3,
           maxHeight: '85vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
           ...(isMobile && {
             position: 'fixed',
             bottom: 0,
@@ -133,15 +131,16 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
       }}
       sx={isMobile ? { '& .MuiDialog-container': { alignItems: 'flex-end' } } : undefined}
     >
-      {/* Header with gradient */}
+      {/* Sticky Header with gradient */}
       <Box
         sx={{
-          flexShrink: 0,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
           background: storage.isGold
             ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
             : `linear-gradient(135deg, ${storage.color || '#667eea'} 0%, ${storage.color ? `${storage.color}dd` : '#764ba2'} 100%)`,
           color: storage.isGold ? '#000' : 'white',
-          position: 'relative',
           overflow: 'hidden',
           '&::before': {
             content: '""',
@@ -297,116 +296,115 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
         </Box>
       </Box>
 
-      <DialogContent sx={{ p: 0, flex: 1, overflow: 'auto', minHeight: 0 }}>
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
-            <CircularProgress />
-          </Box>
-        ) : transactions.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <i className='tabler-receipt-off text-5xl' style={{ color: '#ccc' }} />
-            <Typography color='text.secondary' sx={{ mt: 2 }}>
-              Belum ada transaksi untuk simpanan ini
-            </Typography>
-          </Box>
-        ) : (
-          <Box sx={{ px: 2, py: 1 }}>
-            {transactions.map((transaction, index) => {
-              const config = typeConfig[transaction.type] || typeConfig.income
-              const isIncoming =
-                transaction.type === 'income' ||
-                (transaction.type === 'transfer' && transaction.toStorageTypeId === storage.id)
+      {/* Transaction List - scrolls naturally under sticky header */}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : transactions.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <i className='tabler-receipt-off text-5xl' style={{ color: '#ccc' }} />
+          <Typography color='text.secondary' sx={{ mt: 2 }}>
+            Belum ada transaksi untuk simpanan ini
+          </Typography>
+        </Box>
+      ) : (
+        <Box sx={{ px: 2, py: 1 }}>
+          {transactions.map((transaction, index) => {
+            const config = typeConfig[transaction.type] || typeConfig.income
+            const isIncoming =
+              transaction.type === 'income' ||
+              (transaction.type === 'transfer' && transaction.toStorageTypeId === storage.id)
 
-              return (
-                <Box key={transaction.id || index}>
-                  <Box
+            return (
+              <Box key={transaction.id || index}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    py: 2,
+                    px: 1
+                  }}
+                >
+                  <CustomAvatar color={config.color} variant='rounded' size={44} skin='light'>
+                    <i className={config.icon} />
+                  </CustomAvatar>
+
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography
+                        variant='body1'
+                        sx={{
+                          fontWeight: 500,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {transaction.description || config.label}
+                      </Typography>
+                      <Chip
+                        label={config.label}
+                        size='small'
+                        color={config.color}
+                        variant='tonal'
+                        sx={{ height: 20, fontSize: '0.7rem' }}
+                      />
+                    </Box>
+                    <Typography variant='body2' color='text.secondary' sx={{ fontSize: '0.8rem', mt: 0.5 }}>
+                      {new Date(transaction.date).toLocaleDateString('id-ID', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                      {transaction.familyMember && ` • ${transaction.familyMember.name}`}
+                    </Typography>
+                    {transaction.type === 'transfer' && (
+                      <Typography
+                        variant='caption'
+                        sx={{
+                          color: 'text.secondary',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          mt: 0.5
+                        }}
+                      >
+                        {transaction.fromStorageTypeId === storage.id ? (
+                          <>
+                            <i className='tabler-arrow-right text-sm' />
+                            Ke: {transaction.toStorageType?.name || 'Lainnya'}
+                          </>
+                        ) : (
+                          <>
+                            <i className='tabler-arrow-left text-sm' />
+                            Dari: {transaction.fromStorageType?.name || 'Lainnya'}
+                          </>
+                        )}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  <Typography
+                    variant='body1'
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      py: 2,
-                      px: 1
+                      fontWeight: 600,
+                      color: isIncoming ? 'success.main' : 'error.main',
+                      whiteSpace: 'nowrap'
                     }}
                   >
-                    <CustomAvatar color={config.color} variant='rounded' size={44} skin='light'>
-                      <i className={config.icon} />
-                    </CustomAvatar>
-
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                        <Typography
-                          variant='body1'
-                          sx={{
-                            fontWeight: 500,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          {transaction.description || config.label}
-                        </Typography>
-                        <Chip
-                          label={config.label}
-                          size='small'
-                          color={config.color}
-                          variant='tonal'
-                          sx={{ height: 20, fontSize: '0.7rem' }}
-                        />
-                      </Box>
-                      <Typography variant='body2' color='text.secondary' sx={{ fontSize: '0.8rem', mt: 0.5 }}>
-                        {new Date(transaction.date).toLocaleDateString('id-ID', {
-                          weekday: 'short',
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                        {transaction.familyMember && ` • ${transaction.familyMember.name}`}
-                      </Typography>
-                      {transaction.type === 'transfer' && (
-                        <Typography
-                          variant='caption'
-                          sx={{
-                            color: 'text.secondary',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            mt: 0.5
-                          }}
-                        >
-                          {transaction.fromStorageTypeId === storage.id ? (
-                            <>
-                              <i className='tabler-arrow-right text-sm' />
-                              Ke: {transaction.toStorageType?.name || 'Lainnya'}
-                            </>
-                          ) : (
-                            <>
-                              <i className='tabler-arrow-left text-sm' />
-                              Dari: {transaction.fromStorageType?.name || 'Lainnya'}
-                            </>
-                          )}
-                        </Typography>
-                      )}
-                    </Box>
-
-                    <Typography
-                      variant='body1'
-                      sx={{
-                        fontWeight: 600,
-                        color: isIncoming ? 'success.main' : 'error.main',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {isIncoming ? '+' : '-'}
-                      {formatCurrency(transaction.amount)}
-                    </Typography>
-                  </Box>
-                  {index < transactions.length - 1 && <Divider />}
+                    {isIncoming ? '+' : '-'}
+                    {formatCurrency(transaction.amount)}
+                  </Typography>
                 </Box>
-              )
-            })}
-          </Box>
-        )}
-      </DialogContent>
+                {index < transactions.length - 1 && <Divider />}
+              </Box>
+            )
+          })}
+        </Box>
+      )}
     </Dialog>
   )
 }

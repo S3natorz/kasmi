@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react'
 // MUI Imports
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
 import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
@@ -116,13 +115,11 @@ const ExpenseCategoryTransactionsDialog = ({ open, onClose, category, startDate,
       onClose={handleClose}
       maxWidth='sm'
       fullWidth
+      scroll='paper'
       PaperProps={{
         sx: {
           borderRadius: 3,
           maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
           ...(isMobile && {
             position: 'fixed',
             bottom: 0,
@@ -135,204 +132,212 @@ const ExpenseCategoryTransactionsDialog = ({ open, onClose, category, startDate,
       }}
       sx={isMobile ? { '& .MuiDialog-container': { alignItems: 'flex-end' } } : undefined}
     >
-      <DialogTitle sx={{ p: 3, pb: 2, flexShrink: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <CustomAvatar
-              color={progressColor}
-              variant='rounded'
-              size={48}
-              skin='light'
-              sx={{ bgcolor: category.color || undefined }}
-            >
-              <i className={category.icon || 'tabler-category'} style={{ fontSize: '1.25rem' }} />
-            </CustomAvatar>
-            <Box>
-              <Typography variant='h6' sx={{ fontWeight: 600 }}>
-                {category.category}
-              </Typography>
-              <Typography variant='body2' color='text.secondary'>
-                Pengeluaran Kategori
-              </Typography>
-            </Box>
-          </Box>
-          <IconButton onClick={handleClose} size='small'>
-            <i className='tabler-x' />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-
-      <Divider />
-
-      {/* Budget Progress Summary */}
+      {/* Sticky Header */}
       <Box
         sx={{
-          px: 3,
-          py: 2,
-          flexShrink: 0,
-          bgcolor: theme => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)')
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          bgcolor: 'background.paper'
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant='body2' color='text.secondary'>
-            Penggunaan Budget
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {isOverBudget && (
-              <Chip
-                label='Melebihi Budget!'
-                color='error'
-                size='small'
-                icon={<i className='tabler-alert-triangle' style={{ fontSize: '0.9rem' }} />}
-              />
-            )}
+        <DialogTitle sx={{ p: 3, pb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <CustomAvatar
+                color={progressColor}
+                variant='rounded'
+                size={48}
+                skin='light'
+                sx={{ bgcolor: category.color || undefined }}
+              >
+                <i className={category.icon || 'tabler-category'} style={{ fontSize: '1.25rem' }} />
+              </CustomAvatar>
+              <Box>
+                <Typography variant='h6' sx={{ fontWeight: 600 }}>
+                  {category.category}
+                </Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  Pengeluaran Kategori
+                </Typography>
+              </Box>
+            </Box>
+            <IconButton onClick={handleClose} size='small'>
+              <i className='tabler-x' />
+            </IconButton>
           </Box>
-        </Box>
+        </DialogTitle>
 
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1.5 }}>
-          <Typography variant='h5' sx={{ fontWeight: 700, color: progressColorHex }}>
-            {formatCurrency(category.amount)}
-          </Typography>
-          {category.budget && (
+        <Divider />
+
+        {/* Budget Progress Summary */}
+        <Box
+          sx={{
+            px: 3,
+            py: 2,
+            bgcolor: theme => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)')
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant='body2' color='text.secondary'>
-              / {formatCurrency(category.budget)}
+              Penggunaan Budget
             </Typography>
-          )}
-        </Box>
-
-        {category.budget && (
-          <Box sx={{ mb: 1 }}>
-            <LinearProgress
-              variant='determinate'
-              value={Math.min(progress, 100)}
-              color={progressColor}
-              sx={{
-                height: 10,
-                borderRadius: 5,
-                bgcolor: theme => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')
-              }}
-            />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-              <Typography variant='caption' color='text.secondary'>
-                {progress.toFixed(1)}% terpakai
-              </Typography>
-              {category.budget > category.amount && (
-                <Typography variant='caption' color='success.main'>
-                  Sisa: {formatCurrency(category.budget - category.amount)}
-                </Typography>
-              )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {isOverBudget && (
-                <Typography variant='caption' color='error.main'>
-                  Lebih: {formatCurrency(category.amount - category.budget)}
-                </Typography>
+                <Chip
+                  label='Melebihi Budget!'
+                  color='error'
+                  size='small'
+                  icon={<i className='tabler-alert-triangle' style={{ fontSize: '0.9rem' }} />}
+                />
               )}
             </Box>
           </Box>
-        )}
 
-        <Chip
-          label={`${transactions.length} Transaksi`}
-          color={progressColor}
-          size='small'
-          variant='tonal'
-          icon={<i className='tabler-list' style={{ fontSize: '0.9rem' }} />}
-        />
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1.5 }}>
+            <Typography variant='h5' sx={{ fontWeight: 700, color: progressColorHex }}>
+              {formatCurrency(category.amount)}
+            </Typography>
+            {category.budget && (
+              <Typography variant='body2' color='text.secondary'>
+                / {formatCurrency(category.budget)}
+              </Typography>
+            )}
+          </Box>
+
+          {category.budget && (
+            <Box sx={{ mb: 1 }}>
+              <LinearProgress
+                variant='determinate'
+                value={Math.min(progress, 100)}
+                color={progressColor}
+                sx={{
+                  height: 10,
+                  borderRadius: 5,
+                  bgcolor: theme => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')
+                }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                <Typography variant='caption' color='text.secondary'>
+                  {progress.toFixed(1)}% terpakai
+                </Typography>
+                {category.budget > category.amount && (
+                  <Typography variant='caption' color='success.main'>
+                    Sisa: {formatCurrency(category.budget - category.amount)}
+                  </Typography>
+                )}
+                {isOverBudget && (
+                  <Typography variant='caption' color='error.main'>
+                    Lebih: {formatCurrency(category.amount - category.budget)}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          <Chip
+            label={`${transactions.length} Transaksi`}
+            color={progressColor}
+            size='small'
+            variant='tonal'
+            icon={<i className='tabler-list' style={{ fontSize: '0.9rem' }} />}
+          />
+        </Box>
+
+        <Divider />
       </Box>
 
-      <Divider />
-
-      <DialogContent sx={{ p: 0, flex: 1, overflow: 'auto', minHeight: 0 }}>
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
-            <CircularProgress />
-          </Box>
-        ) : transactions.length > 0 ? (
-          <Box>
-            {transactions.map((transaction, index) => (
-              <Box key={transaction.id || index}>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 2,
-                    px: 3,
-                    py: 2,
-                    '&:hover': {
-                      bgcolor: theme => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)')
-                    }
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, overflow: 'hidden', flex: 1 }}>
-                    <CustomAvatar color='error' variant='rounded' size={40} skin='light'>
-                      <i className='tabler-arrow-down' />
-                    </CustomAvatar>
-                    <Box sx={{ overflow: 'hidden', flex: 1 }}>
-                      <Typography
-                        variant='body1'
-                        sx={{
-                          fontWeight: 500,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}
-                      >
-                        {transaction.description || 'Pengeluaran'}
+      {/* Transaction List - scrolls naturally under sticky header */}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : transactions.length > 0 ? (
+        <Box>
+          {transactions.map((transaction, index) => (
+            <Box key={transaction.id || index}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  px: 3,
+                  py: 2,
+                  '&:hover': {
+                    bgcolor: theme => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)')
+                  }
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, overflow: 'hidden', flex: 1 }}>
+                  <CustomAvatar color='error' variant='rounded' size={40} skin='light'>
+                    <i className='tabler-arrow-down' />
+                  </CustomAvatar>
+                  <Box sx={{ overflow: 'hidden', flex: 1 }}>
+                    <Typography
+                      variant='body1'
+                      sx={{
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {transaction.description || 'Pengeluaran'}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Typography variant='caption' color='text.secondary'>
+                        {new Date(transaction.date).toLocaleDateString('id-ID', {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
                       </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                        <Typography variant='caption' color='text.secondary'>
-                          {new Date(transaction.date).toLocaleDateString('id-ID', {
-                            weekday: 'short',
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </Typography>
-                        {transaction.familyMember && (
-                          <>
-                            <Typography variant='caption' color='text.secondary'>
-                              •
-                            </Typography>
-                            <Chip
-                              label={transaction.familyMember.name}
-                              size='small'
-                              variant='outlined'
-                              sx={{ height: 20, fontSize: '0.7rem' }}
-                            />
-                          </>
-                        )}
-                      </Box>
+                      {transaction.familyMember && (
+                        <>
+                          <Typography variant='caption' color='text.secondary'>
+                            •
+                          </Typography>
+                          <Chip
+                            label={transaction.familyMember.name}
+                            size='small'
+                            variant='outlined'
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                        </>
+                      )}
                     </Box>
                   </Box>
-                  <Typography
-                    variant='body1'
-                    sx={{
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      color: 'error.main'
-                    }}
-                  >
-                    -{formatCurrency(transaction.amount)}
-                  </Typography>
                 </Box>
-                {index < transactions.length - 1 && <Divider />}
+                <Typography
+                  variant='body1'
+                  sx={{
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    color: 'error.main'
+                  }}
+                >
+                  -{formatCurrency(transaction.amount)}
+                </Typography>
               </Box>
-            ))}
-          </Box>
-        ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
-            <CustomAvatar color='secondary' variant='rounded' size={64} skin='light' sx={{ mb: 2 }}>
-              <i className='tabler-receipt-off text-3xl' />
-            </CustomAvatar>
-            <Typography variant='h6' color='text.secondary'>
-              Tidak ada transaksi
-            </Typography>
-            <Typography variant='body2' color='text.secondary'>
-              Belum ada pengeluaran untuk kategori ini pada periode ini
-            </Typography>
-          </Box>
-        )}
-      </DialogContent>
+              {index < transactions.length - 1 && <Divider />}
+            </Box>
+          ))}
+        </Box>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
+          <CustomAvatar color='secondary' variant='rounded' size={64} skin='light' sx={{ mb: 2 }}>
+            <i className='tabler-receipt-off text-3xl' />
+          </CustomAvatar>
+          <Typography variant='h6' color='text.secondary'>
+            Tidak ada transaksi
+          </Typography>
+          <Typography variant='body2' color='text.secondary'>
+            Belum ada pengeluaran untuk kategori ini pada periode ini
+          </Typography>
+        </Box>
+      )}
     </Dialog>
   )
 }
