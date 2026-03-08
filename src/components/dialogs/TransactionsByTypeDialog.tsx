@@ -125,7 +125,7 @@ const TransactionsByTypeDialog = ({
             m: 0,
             borderBottomLeftRadius: 0,
             borderBottomRightRadius: 0,
-            maxHeight: '92vh'
+            maxHeight: '70vh'
           })
         }
       }}
