@@ -12,6 +12,8 @@ import Button from '@mui/material/Button'
 import Grid from '@mui/material/Grid'
 import MenuItem from '@mui/material/MenuItem'
 import IconButton from '@mui/material/IconButton'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
@@ -45,6 +47,8 @@ const parseRupiahInput = (value: string) => {
 }
 
 const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     type: 'income' as 'income' | 'expense' | 'savings' | 'transfer',
@@ -157,12 +161,24 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
       onClose={onClose}
       maxWidth='sm'
       fullWidth
+      scroll='paper'
       PaperProps={{
         sx: {
-          m: { xs: 2, sm: 3 },
-          maxHeight: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 64px)' }
+          m: { xs: 0, sm: 3 },
+          maxHeight: { xs: '85vh', sm: 'calc(100% - 64px)' },
+          ...(isMobile && {
+            position: 'fixed',
+            bottom: 0,
+            borderBottomLeftRadius: 0,
+            borderBottomRightRadius: 0,
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            width: '100%',
+            maxWidth: '100%'
+          })
         }
       }}
+      sx={isMobile ? { '& .MuiDialog-container': { alignItems: 'flex-end' } } : undefined}
     >
       <DialogTitle className='flex items-center justify-between'>
         <span>Tambah Transaksi</span>
@@ -376,9 +392,12 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
               <CustomTextField
                 select
                 fullWidth
+                required
                 label='Kategori Pengeluaran'
                 value={formData.expenseCategoryId}
                 onChange={e => setFormData({ ...formData, expenseCategoryId: e.target.value })}
+                error={!formData.expenseCategoryId}
+                helperText={!formData.expenseCategoryId ? 'Pilih kategori pengeluaran' : ''}
               >
                 <MenuItem value=''>-- Pilih Kategori --</MenuItem>
                 {expenseCategories.map(cat => (
@@ -403,6 +422,7 @@ const AddTransactionDialog = ({ open, onClose, onSuccess }: Props) => {
             !formData.amount ||
             (formData.type === 'income' && !formData.toStorageTypeId) ||
             ((formData.type === 'expense' || formData.type === 'savings') && !formData.fromStorageTypeId) ||
+            (formData.type === 'expense' && !formData.expenseCategoryId) ||
             (formData.type === 'transfer' && (!formData.fromStorageTypeId || !formData.toStorageTypeId))
           }
         >
