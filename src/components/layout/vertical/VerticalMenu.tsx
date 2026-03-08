@@ -101,6 +101,9 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
             <MenuItem href={`/${locale}/apps/tabungan/categories/savings`}>Kategori Tabungan</MenuItem>
             <MenuItem href={`/${locale}/apps/tabungan/categories/expenses`}>Kategori Pengeluaran</MenuItem>
           </SubMenu>
+          <MenuItem href={`/${locale}/apps/tabungan/backup`} icon={<i className='tabler-database-export' />}>
+            Backup & Restore
+          </MenuItem>
         </MenuSection>
       </Menu>
       {/* <Menu
