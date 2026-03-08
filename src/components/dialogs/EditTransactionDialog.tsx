@@ -21,6 +21,7 @@ import VoiceTransactionButton from '@/components/VoiceTransactionButton'
 
 // Utils
 import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
+import { fuzzyMatchName } from '@/utils/voiceTransactionParser'
 import type { ParsedTransaction } from '@/utils/voiceTransactionParser'
 
 // Types
@@ -173,11 +174,32 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
   }
 
   const handleVoiceParsed = (data: ParsedTransaction) => {
+    const type = data.type || formData.type
+    const storageItems = storageTypes.filter(s => !s.isGold).map(s => ({ id: s.id, name: s.name }))
+    const expenseItems = expenseCategories.map(c => ({ id: c.id, name: c.name }))
+    const savingsItems = savingsCategories.map(c => ({ id: c.id, name: c.name }))
+
+    const matchedStorageId = data.storageHint ? fuzzyMatchName(data.storageHint, storageItems) : ''
+    let matchedExpenseCategoryId = ''
+    let matchedSavingsCategoryId = ''
+
+    if (data.categoryHint) {
+      if (type === 'expense') {
+        matchedExpenseCategoryId = fuzzyMatchName(data.categoryHint, expenseItems)
+      } else if (type === 'savings') {
+        matchedSavingsCategoryId = fuzzyMatchName(data.categoryHint, savingsItems)
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
-      ...(data.type && { type: data.type, savingsCategoryId: '', expenseCategoryId: '', fromStorageTypeId: '', toStorageTypeId: '' }),
+      type,
       ...(data.amount && { amount: formatRupiahInput(data.amount.toString()) }),
-      ...(data.description && { description: data.description })
+      ...(data.description && { description: data.description }),
+      fromStorageTypeId: (type === 'expense' || type === 'savings' || type === 'transfer') ? matchedStorageId : prev.fromStorageTypeId,
+      toStorageTypeId: type === 'income' ? matchedStorageId : prev.toStorageTypeId,
+      expenseCategoryId: matchedExpenseCategoryId || prev.expenseCategoryId,
+      savingsCategoryId: matchedSavingsCategoryId || prev.savingsCategoryId
     }))
   }
 
