@@ -13,8 +13,6 @@ import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 import CircularProgress from '@mui/material/CircularProgress'
-import useMediaQuery from '@mui/material/useMediaQuery'
-import { useTheme } from '@mui/material/styles'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -47,8 +45,6 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
   const [transactions, setTransactions] = useState<TransactionType[]>([])
   const [loading, setLoading] = useState(false)
   const [goldPrice, setGoldPrice] = useState<number>(0)
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   useEffect(() => {
     if (open && storage) {
@@ -118,18 +114,9 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
       PaperProps={{
         sx: {
           borderRadius: 3,
-          maxHeight: '85vh',
-          ...(isMobile && {
-            position: 'fixed',
-            bottom: 0,
-            m: 0,
-            borderBottomLeftRadius: 0,
-            borderBottomRightRadius: 0,
-            maxHeight: '85vh'
-          })
+          maxHeight: '85vh'
         }
       }}
-      sx={isMobile ? { '& .MuiDialog-container': { alignItems: 'flex-end' } } : undefined}
     >
       {/* Sticky Header with gradient */}
       <Box
