@@ -118,13 +118,16 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
         sx: {
           borderRadius: 3,
           maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
           ...(isMobile && {
             position: 'fixed',
             bottom: 0,
             m: 0,
             borderBottomLeftRadius: 0,
             borderBottomRightRadius: 0,
-            maxHeight: '70vh'
+            maxHeight: '85vh'
           })
         }
       }}
@@ -293,7 +296,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
         </Box>
       </Box>
 
-      <DialogContent sx={{ p: 0 }}>
+      <DialogContent sx={{ p: 0, flex: 1, overflow: 'auto' }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
             <CircularProgress />
