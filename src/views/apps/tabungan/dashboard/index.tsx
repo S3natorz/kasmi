@@ -147,6 +147,9 @@ const TabunganDashboard = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<TransactionType | null>(null)
 
+  // Recent transactions filter state
+  const [recentFilter, setRecentFilter] = useState<'all' | 'income' | 'expense' | 'savings' | 'transfer'>('all')
+
   // Gold price state
   const [goldPrice, setGoldPrice] = useState<number>(0)
 
@@ -879,9 +882,66 @@ const TabunganDashboard = () => {
         <Card>
           <CardHeader title='Transaksi Terbaru' />
           <CardContent>
+            {/* Filter Tabs */}
+            {(() => {
+              const recentTxns = stats.recentTransactions
+              const counts = {
+                all: recentTxns.length,
+                income: recentTxns.filter((t: any) => t.type === 'income').length,
+                expense: recentTxns.filter((t: any) => t.type === 'expense').length,
+                savings: recentTxns.filter((t: any) => t.type === 'savings').length,
+                transfer: recentTxns.filter((t: any) => t.type === 'transfer').length
+              }
+
+              const tabs: { key: typeof recentFilter; label: string; icon: string; color: string }[] = [
+                { key: 'all', label: 'Semua', icon: 'tabler-list', color: 'primary' },
+                { key: 'income', label: 'Masuk', icon: 'tabler-arrow-up', color: 'success' },
+                { key: 'expense', label: 'Keluar', icon: 'tabler-arrow-down', color: 'error' },
+                { key: 'savings', label: 'Tabungan', icon: 'tabler-coin', color: 'info' },
+                { key: 'transfer', label: 'Transfer', icon: 'tabler-transfer', color: 'warning' }
+              ]
+
+              return (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 1,
+                    mb: 3,
+                    overflowX: 'auto',
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none',
+                    '&::-webkit-scrollbar': { display: 'none' },
+                    pb: 0.5
+                  }}
+                >
+                  {tabs.map(tab => (
+                    <Chip
+                      key={tab.key}
+                      icon={<i className={tab.icon} style={{ fontSize: '0.9rem' }} />}
+                      label={`${tab.label} (${counts[tab.key]})`}
+                      onClick={() => setRecentFilter(tab.key)}
+                      color={recentFilter === tab.key ? (tab.color as any) : 'default'}
+                      variant={recentFilter === tab.key ? 'filled' : 'outlined'}
+                      sx={{
+                        cursor: 'pointer',
+                        fontWeight: recentFilter === tab.key ? 600 : 400,
+                        flexShrink: 0
+                      }}
+                    />
+                  ))}
+                </Box>
+              )
+            })()}
+
             <div className='flex flex-col gap-2'>
-              {stats.recentTransactions.length > 0 ? (
-                stats.recentTransactions.slice(0, 5).map((transaction, index) => {
+              {(() => {
+                const filtered =
+                  recentFilter === 'all'
+                    ? stats.recentTransactions
+                    : stats.recentTransactions.filter((t: any) => t.type === recentFilter)
+
+                return filtered.length > 0 ? (
+                  filtered.slice(0, 10).map((transaction: any, index: number) => {
                   // Get storage info based on transaction type
                   const getStorageInfo = () => {
                     if (transaction.type === 'income' && transaction.toStorageType) {
@@ -1019,9 +1079,12 @@ const TabunganDashboard = () => {
                     </Box>
                   )
                 })
-              ) : (
-                <Typography color='text.secondary'>Belum ada transaksi</Typography>
-              )}
+                ) : (
+                  <Typography color='text.secondary'>
+                    {recentFilter === 'all' ? 'Belum ada transaksi' : 'Tidak ada transaksi untuk filter ini'}
+                  </Typography>
+                )
+              })()}
             </div>
           </CardContent>
         </Card>
