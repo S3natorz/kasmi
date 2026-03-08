@@ -1098,11 +1098,12 @@ const TabunganDashboard = () => {
       {/* Floating Speed Dial - Tambah Transaksi */}
       <SpeedDial
         ariaLabel='Tambah Transaksi'
+        direction='up'
         icon={<i className='tabler-plus text-base' />}
         sx={{
           position: 'fixed',
           bottom: { xs: 5, sm: 28 },
-          right: { xs: 40, sm: 75 },
+          left: { xs: 20, sm: 75 },
           zIndex: 1000,
           '& .MuiFab-primary': {
             bgcolor: 'error.main',
