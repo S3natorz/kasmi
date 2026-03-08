@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react'
 // MUI Imports
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
 import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
@@ -110,20 +109,20 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
       onClose={handleClose}
       maxWidth='sm'
       fullWidth
-      scroll='paper'
       PaperProps={{
         sx: {
           borderRadius: 3,
-          maxHeight: '85vh'
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }
       }}
     >
-      {/* Sticky Header with gradient */}
+      {/* Fixed Header with gradient */}
       <Box
         sx={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
+          flexShrink: 0,
           background: storage.isGold
             ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
             : `linear-gradient(135deg, ${storage.color || '#667eea'} 0%, ${storage.color ? `${storage.color}dd` : '#764ba2'} 100%)`,
@@ -283,7 +282,8 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
         </Box>
       </Box>
 
-      {/* Transaction List - scrolls naturally under sticky header */}
+      {/* Transaction List - scrollable area */}
+      <Box sx={{ flex: 1, overflowY: 'auto' }}>
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
           <CircularProgress />
@@ -392,6 +392,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
           })}
         </Box>
       )}
+      </Box>
     </Dialog>
   )
 }
