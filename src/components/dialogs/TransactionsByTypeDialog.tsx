@@ -43,6 +43,7 @@ const formatCurrency = (amount: number) => {
 
 const typeConfig: Record<string, { label: string; color: ThemeColor; icon: string }> = {
   income: { label: 'Pemasukan', color: 'success', icon: 'tabler-arrow-up' },
+  gold_income: { label: 'Pemasukan Emas', color: 'warning', icon: 'tabler-diamond' },
   expense: { label: 'Pengeluaran', color: 'error', icon: 'tabler-arrow-down' },
   savings: { label: 'Tabungan', color: 'info', icon: 'tabler-coin' },
   transfer: { label: 'Transfer', color: 'warning', icon: 'tabler-transfer' }
@@ -291,8 +292,9 @@ const TransactionsByTypeDialog = ({
                       color: `${txConfig.color}.main`
                     }}
                   >
-                    {transaction.type === 'income' ? '+' : '-'}
-                    {formatCurrency(transaction.amount)}
+                    {transaction.type === 'gold_income'
+                      ? `+${transaction.amount}g`
+                      : `${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}`}
                   </Typography>
                 </Box>
                 {index < transactions.length - 1 && <Divider />}
