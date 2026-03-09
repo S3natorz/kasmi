@@ -35,6 +35,7 @@ const formatCurrency = (amount: number) => {
 
 const typeConfig: Record<string, { label: string; color: 'success' | 'error' | 'info' | 'warning'; icon: string }> = {
   income: { label: 'Pemasukan', color: 'success', icon: 'tabler-arrow-up' },
+  gold_income: { label: 'Pemasukan Emas', color: 'warning', icon: 'tabler-diamond' },
   expense: { label: 'Pengeluaran', color: 'error', icon: 'tabler-arrow-down' },
   savings: { label: 'Tabungan', color: 'info', icon: 'tabler-coin' },
   transfer: { label: 'Transfer', color: 'warning', icon: 'tabler-transfer' }
@@ -94,7 +95,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
 
   // Calculate stats for this storage
   const totalIn = transactions
-    .filter(t => t.type === 'income' || (t.type === 'transfer' && t.toStorageTypeId === storage.id))
+    .filter(t => t.type === 'income' || t.type === 'gold_income' || (t.type === 'transfer' && t.toStorageTypeId === storage.id))
     .reduce((sum, t) => sum + t.amount, 0)
 
   const totalOut = transactions
@@ -301,6 +302,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
             const config = typeConfig[transaction.type] || typeConfig.income
             const isIncoming =
               transaction.type === 'income' ||
+              transaction.type === 'gold_income' ||
               (transaction.type === 'transfer' && transaction.toStorageTypeId === storage.id)
 
             return (
@@ -382,8 +384,9 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    {isIncoming ? '+' : '-'}
-                    {formatCurrency(transaction.amount)}
+                    {transaction.type === 'gold_income'
+                      ? `+${transaction.amount}g`
+                      : `${isIncoming ? '+' : '-'}${formatCurrency(transaction.amount)}`}
                   </Typography>
                 </Box>
                 {index < transactions.length - 1 && <Divider />}
