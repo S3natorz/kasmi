@@ -58,7 +58,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
     amount: '',
     goldGrams: '',
     description: '',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0],
     familyMemberId: '',
     savingsCategoryId: '',
     expenseCategoryId: '',
