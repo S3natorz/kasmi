@@ -1,8 +1,8 @@
 // Component Imports
-import TabunganDashboard from '@views/apps/tabungan/dashboard'
+import MobileHome from '@views/apps/tabungan/mobile/MobileHome'
 
 const TabunganDashboardPage = () => {
-  return <TabunganDashboard />
+  return <MobileHome />
 }
 
 export default TabunganDashboardPage
