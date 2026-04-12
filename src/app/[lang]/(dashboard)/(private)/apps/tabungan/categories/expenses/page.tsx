@@ -1,8 +1,8 @@
 // Component Imports
-import ExpenseCategoriesTable from '@views/apps/tabungan/categories/ExpenseCategoriesTable'
+import MobileCategories from '@views/apps/tabungan/mobile/MobileCategories'
 
 const ExpenseCategoriesPage = () => {
-  return <ExpenseCategoriesTable />
+  return <MobileCategories kind='expenses' />
 }
 
 export default ExpenseCategoriesPage

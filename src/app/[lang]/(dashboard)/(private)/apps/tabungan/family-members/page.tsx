@@ -1,8 +1,8 @@
 // Component Imports
-import FamilyMembersTable from '@views/apps/tabungan/family-members/FamilyMembersTable'
+import MobileFamilyMembers from '@views/apps/tabungan/mobile/MobileFamilyMembers'
 
 const FamilyMembersPage = () => {
-  return <FamilyMembersTable />
+  return <MobileFamilyMembers />
 }
 
 export default FamilyMembersPage

@@ -1,8 +1,8 @@
 // Component Imports
-import SavingsCategoriesTable from '@views/apps/tabungan/categories/SavingsCategoriesTable'
+import MobileCategories from '@views/apps/tabungan/mobile/MobileCategories'
 
 const SavingsCategoriesPage = () => {
-  return <SavingsCategoriesTable />
+  return <MobileCategories kind='savings' />
 }
 
 export default SavingsCategoriesPage

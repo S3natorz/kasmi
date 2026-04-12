@@ -1,7 +1,7 @@
-import BackupRestore from '@views/apps/tabungan/backup'
+import MobileBackup from '@views/apps/tabungan/mobile/MobileBackup'
 
 const BackupRestorePage = () => {
-  return <BackupRestore />
+  return <MobileBackup />
 }
 
 export default BackupRestorePage

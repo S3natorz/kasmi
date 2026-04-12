@@ -1,8 +1,8 @@
 // Component Imports
-import TransactionListTable from '@views/apps/tabungan/transactions/TransactionListTable'
+import MobileTransactions from '@views/apps/tabungan/mobile/MobileTransactions'
 
 const TransactionsPage = () => {
-  return <TransactionListTable />
+  return <MobileTransactions />
 }
 
 export default TransactionsPage

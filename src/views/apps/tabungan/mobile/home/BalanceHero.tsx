@@ -4,6 +4,7 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
+import { useTheme } from '@mui/material/styles'
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -23,6 +24,8 @@ type Props = {
 }
 
 const BalanceHero = ({ totalBalance, totalIncome, totalExpenses, periodLabel, hideBalance, onToggleHide }: Props) => {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
   const maskValue = (value: string) => (hideBalance ? '••••••••' : value)
 
   return (
@@ -32,10 +35,14 @@ const BalanceHero = ({ totalBalance, totalIncome, totalExpenses, periodLabel, hi
           position: 'relative',
           borderRadius: '24px',
           p: 3,
-          background: 'linear-gradient(135deg, #7367F0 0%, #9E95F5 50%, #BAB3F8 100%)',
+          background: isDark
+            ? 'linear-gradient(135deg, #4A3FAB 0%, #6257C7 50%, #5F4BC1 100%)'
+            : 'linear-gradient(135deg, #7367F0 0%, #9E95F5 50%, #BAB3F8 100%)',
           color: '#fff',
           overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(115, 103, 240, 0.35)'
+          boxShadow: isDark
+            ? '0 12px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06) inset'
+            : '0 12px 32px rgba(115, 103, 240, 0.35)'
         }}
       >
         {/* Decorative circles */}

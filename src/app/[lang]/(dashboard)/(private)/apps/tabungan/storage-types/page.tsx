@@ -1,8 +1,8 @@
 // Component Imports
-import StorageTypesTable from '@views/apps/tabungan/storage-types/StorageTypesTable'
+import MobileStorages from '@views/apps/tabungan/mobile/MobileStorages'
 
 const StorageTypesPage = () => {
-  return <StorageTypesTable />
+  return <MobileStorages />
 }
 
 export default StorageTypesPage

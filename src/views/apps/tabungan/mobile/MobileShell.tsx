@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, ReactNode } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 
 // Next Imports
 import { useRouter, useParams } from 'next/navigation'
@@ -46,6 +46,40 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
+  // Hide outer VerticalLayout navbar + sidebar so we get true fullscreen mobile feel
+  useEffect(() => {
+    const styleId = 'kasmi-mobile-shell-style'
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null
+
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = styleId
+      styleEl.innerHTML = `
+        body.kasmi-mobile-active .ts-vertical-layout-header,
+        body.kasmi-mobile-active .ts-vertical-nav-root,
+        body.kasmi-mobile-active .ts-vertical-layout-footer,
+        body.kasmi-mobile-active .customizer {
+          display: none !important;
+        }
+        body.kasmi-mobile-active .ts-vertical-layout-content-wrapper,
+        body.kasmi-mobile-active .ts-vertical-layout-content {
+          padding: 0 !important;
+          margin: 0 !important;
+          max-width: 100% !important;
+        }
+        body.kasmi-mobile-active main {
+          padding: 0 !important;
+        }
+      `
+      document.head.appendChild(styleEl)
+    }
+    document.body.classList.add('kasmi-mobile-active')
+
+    return () => {
+      document.body.classList.remove('kasmi-mobile-active')
+    }
+  }, [])
+
   const handleMenuItemClick = (path: string) => {
     router.push(`/${lang}${path}`)
     setMenuOpen(false)
@@ -58,7 +92,7 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
         width: '100%',
         display: 'flex',
         justifyContent: 'center',
-        backgroundColor: isDark ? '#0F1014' : '#F4F5FA',
+        backgroundColor: isDark ? '#0B0C10' : '#F4F5FA',
         position: 'relative'
       }}
     >
@@ -68,10 +102,9 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
           maxWidth: isDesktop ? 480 : '100%',
           minHeight: '100vh',
           position: 'relative',
-          backgroundColor: isDark ? '#16181F' : '#FFFFFF',
-          boxShadow: isDesktop ? '0 0 40px rgba(0,0,0,0.1)' : 'none',
-          paddingBottom: '88px',
-          overflow: 'hidden'
+          backgroundColor: isDark ? '#15171E' : '#FFFFFF',
+          boxShadow: isDesktop ? '0 0 40px rgba(0,0,0,0.3)' : 'none',
+          paddingBottom: '88px'
         }}
       >
         {children}
@@ -119,7 +152,7 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
                       width: 36,
                       height: 36,
                       borderRadius: '10px',
-                      backgroundColor: 'rgba(115, 103, 240, 0.1)',
+                      backgroundColor: 'rgba(115, 103, 240, 0.12)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'

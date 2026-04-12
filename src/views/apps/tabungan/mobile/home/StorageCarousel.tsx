@@ -4,6 +4,7 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
+import { useTheme } from '@mui/material/styles'
 
 // Type Imports
 import type { StorageTypeType } from '@/types/apps/tabunganTypes'
@@ -16,15 +17,27 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const gradients = [
+// Darker, more muted gradients that work in both light/dark mode
+const lightGradients = [
   'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)',
   'linear-gradient(135deg, #F093FB 0%, #F5576C 100%)',
-  'linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%)',
-  'linear-gradient(135deg, #43E97B 0%, #38F9D7 100%)',
-  'linear-gradient(135deg, #FA709A 0%, #FEE140 100%)',
-  'linear-gradient(135deg, #30CFD0 0%, #330867 100%)',
-  'linear-gradient(135deg, #A8EDEA 0%, #FED6E3 100%)',
-  'linear-gradient(135deg, #FFE9A0 0%, #FFB480 100%)'
+  'linear-gradient(135deg, #4FACFE 0%, #00C9FF 100%)',
+  'linear-gradient(135deg, #43C4A1 0%, #2BB19C 100%)',
+  'linear-gradient(135deg, #FA709A 0%, #FEB47B 100%)',
+  'linear-gradient(135deg, #30CFD0 0%, #6B7FD7 100%)',
+  'linear-gradient(135deg, #FFB86C 0%, #FF7043 100%)',
+  'linear-gradient(135deg, #8EC5FC 0%, #E0C3FC 100%)'
+]
+
+const darkGradients = [
+  'linear-gradient(135deg, #3B4371 0%, #2E1A47 100%)',
+  'linear-gradient(135deg, #6B2D5C 0%, #4A1A35 100%)',
+  'linear-gradient(135deg, #1E5F74 0%, #133B5C 100%)',
+  'linear-gradient(135deg, #1F4D46 0%, #0F3B2F 100%)',
+  'linear-gradient(135deg, #5D3A5A 0%, #3B2135 100%)',
+  'linear-gradient(135deg, #1A4F63 0%, #2D3561 100%)',
+  'linear-gradient(135deg, #6B3F2E 0%, #3E2317 100%)',
+  'linear-gradient(135deg, #3D3A6B 0%, #2A2548 100%)'
 ]
 
 type Props = {
@@ -35,6 +48,9 @@ type Props = {
 }
 
 const StorageCarousel = ({ storages, goldPrice, hideBalance, onStorageClick }: Props) => {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
+  const gradients = isDark ? darkGradients : lightGradients
   const maskValue = (value: string) => (hideBalance ? '••••••' : value)
 
   if (storages.length === 0) return null
@@ -80,7 +96,8 @@ const StorageCarousel = ({ storages, goldPrice, hideBalance, onStorageClick }: P
                 overflow: 'hidden',
                 background: gradients[idx % gradients.length],
                 color: '#fff',
-                boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                boxShadow: isDark ? '0 8px 20px rgba(0,0,0,0.4)' : '0 8px 20px rgba(0,0,0,0.12)',
+                border: isDark ? '1px solid rgba(255,255,255,0.06)' : 'none',
                 transition: 'transform 0.2s ease',
                 '&:active': { transform: 'scale(0.97)' }
               }}
@@ -93,7 +110,7 @@ const StorageCarousel = ({ storages, goldPrice, hideBalance, onStorageClick }: P
                   width: 100,
                   height: 100,
                   borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.15)'
+                  background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.15)'
                 }}
               />
               <Box
