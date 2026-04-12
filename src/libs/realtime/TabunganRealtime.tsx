@@ -3,69 +3,122 @@
 // React Imports
 import { useEffect, useRef } from 'react'
 
-// Socket.io client
-import type { Socket } from 'socket.io-client';
-import { io } from 'socket.io-client'
-
 // Hook imports
 import { invalidateTabuganKeys } from '@/hooks/useTabunganData'
 
 // Events
-import { EVENT_INVALIDATION_MAP, TABUNGAN_EVENTS } from './events'
-import type { TabunganEventName } from './events'
+import { EVENT_INVALIDATION_MAP } from './events'
+import type { TabunganEventName, TabunganEventPayload } from './events'
 
 /**
- * Connects to the Socket.io server (if one is running) and forwards invalidation
- * events to the Tabungan data cache. Silently no-ops when the server isn't
- * available — e.g. when running `npm run dev` with Turbopack + default server.
+ * Connects to the Cloudflare `kasmi-realtime` Durable Object via a native
+ * WebSocket and forwards invalidation events to the Tabungan data cache.
  *
- * Mounted once near the root of the Tabungan subtree; it owns a single socket
- * connection for the whole session.
+ * URL is read from `NEXT_PUBLIC_REALTIME_URL` (e.g. the `kasmi-realtime`
+ * worker's `*.workers.dev` hostname or a custom route). Silently no-ops
+ * when the variable isn't set — e.g. during `next dev` without CF bindings.
  */
 const TabunganRealtime = () => {
-  const socketRef = useRef<Socket | null>(null)
+  const socketRef = useRef<WebSocket | null>(null)
+  const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    // Lazy-connect so the first page render isn't blocked by the WS handshake.
-    const timer = setTimeout(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_REALTIME_URL
+
+    if (!baseUrl) return
+
+    // Build the ws:// URL once. Supports passing either `https://...` or
+    // `wss://...` in the env var.
+    const wsUrl = baseUrl.replace(/^http/, 'ws').replace(/\/$/, '') + '/ws'
+
+    let cancelled = false
+    let attempt = 0
+    let pingTimer: ReturnType<typeof setInterval> | null = null
+
+    const connect = () => {
+      if (cancelled) return
+
       try {
-        const socket = io({
-          path: '/socket.io',
-          transports: ['websocket', 'polling'],
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 2000
-        })
+        const socket = new WebSocket(wsUrl)
 
         socketRef.current = socket
 
-        Object.values(TABUNGAN_EVENTS).forEach(eventName => {
-          socket.on(eventName, () => {
-            const keys = EVENT_INVALIDATION_MAP[eventName as TabunganEventName]
+        socket.addEventListener('open', () => {
+          attempt = 0
 
-            if (keys?.length) invalidateTabuganKeys(keys)
-          })
+          // Keepalive ping every 25s. DO is billed per WS tick, but only
+          // when active — hibernation handles idle connections for free.
+          pingTimer = setInterval(() => {
+            if (socket.readyState === WebSocket.OPEN) {
+              try {
+                socket.send('ping')
+              } catch {
+                /* ignore */
+              }
+            }
+          }, 25_000)
         })
 
-        socket.on('connect_error', err => {
-          // Socket server not available (e.g. default Next dev server). Give up.
-          if ((err as { message?: string }).message?.includes('xhr poll error')) {
-            socket.close()
+        socket.addEventListener('message', ev => {
+          if (typeof ev.data !== 'string') return
+          if (ev.data === 'pong') return
+
+          try {
+            const msg = JSON.parse(ev.data) as TabunganEventPayload
+            const keys = EVENT_INVALIDATION_MAP[msg.event as TabunganEventName]
+
+            if (keys?.length) invalidateTabuganKeys(keys)
+          } catch {
+            /* ignore malformed payloads */
           }
+        })
+
+        const scheduleReconnect = () => {
+          if (cancelled) return
+
+          attempt++
+          const delay = Math.min(30_000, 1000 * 2 ** Math.min(attempt, 5))
+
+          reconnectRef.current = setTimeout(connect, delay)
+        }
+
+        socket.addEventListener('close', () => {
+          if (pingTimer) clearInterval(pingTimer)
+          pingTimer = null
+          scheduleReconnect()
+        })
+
+        socket.addEventListener('error', () => {
+          // `close` fires right after, which schedules the reconnect.
+          if (pingTimer) clearInterval(pingTimer)
+          pingTimer = null
         })
       } catch (err) {
         console.warn('TabunganRealtime connect failed (non-fatal):', err)
       }
-    }, 500)
+    }
+
+    // Lazy-connect so the first paint isn't blocked by the WS handshake.
+    const kickoff = setTimeout(connect, 500)
 
     return () => {
-      clearTimeout(timer)
+      cancelled = true
+      clearTimeout(kickoff)
 
-      if (socketRef.current) {
-        socketRef.current.removeAllListeners()
-        socketRef.current.close()
+      if (reconnectRef.current) clearTimeout(reconnectRef.current)
+      if (pingTimer) clearInterval(pingTimer)
+
+      const socket = socketRef.current
+
+      if (socket) {
+        try {
+          socket.close()
+        } catch {
+          /* ignore */
+        }
+
         socketRef.current = null
       }
     }

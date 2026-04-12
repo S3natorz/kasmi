@@ -1,0 +1,24 @@
+#:schema node_modules/wrangler/config-schema.json
+
+# Realtime Durable Object worker.
+# Owns the TabunganBroadcaster DO class and is bound into the main Next.js
+# worker via `script_name = "kasmi-realtime"` in the root wrangler.toml.
+
+name = "kasmi-realtime"
+main = "index.ts"
+compatibility_date = "2024-11-06"
+compatibility_flags = ["nodejs_compat"]
+
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "REALTIME"
+class_name = "TabunganBroadcaster"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TabunganBroadcaster"]
+
+# REALTIME_SECRET is provisioned via `wrangler secret put REALTIME_SECRET`
+# (same value must be set in the main worker so the Next.js app can
+# authenticate its /broadcast POSTs).

@@ -1,0 +1,32 @@
+#:schema node_modules/wrangler/config-schema.json
+
+# Main application worker — serves the Next.js app via @opennextjs/cloudflare.
+# The DO namespace binding points at the `kasmi-realtime` worker defined in
+# workers/realtime/wrangler.toml, which owns the TabunganBroadcaster class.
+
+name = "kasmi"
+main = ".open-next/worker.js"
+compatibility_date = "2024-11-06"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets produced by OpenNext. The binding name `ASSETS` is expected
+# by the generated worker.
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+run_worker_first = false
+
+# Durable Object binding — references the class exported by kasmi-realtime.
+[[durable_objects.bindings]]
+name = "REALTIME"
+class_name = "TabunganBroadcaster"
+script_name = "kasmi-realtime"
+
+# R2 / KV / etc. can be added later. Secrets (DATABASE_URL, REALTIME_SECRET,
+# NEXTAUTH_SECRET, NEXT_PUBLIC_REALTIME_URL) are set via:
+#   wrangler secret put DATABASE_URL
+#   wrangler secret put REALTIME_SECRET
+# or through the GitHub Actions workflow.
+
+[vars]
+# Non-secret runtime config goes here. (Populated at deploy time.)

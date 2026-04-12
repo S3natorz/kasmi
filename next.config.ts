@@ -1,6 +1,17 @@
 import type { NextConfig } from 'next'
 import withPWA from 'next-pwa'
 
+// Initialise OpenNext Cloudflare bindings during `next dev`. Safe no-op on
+// other environments. The dynamic import keeps the module optional at
+// build time if you later decide to deploy elsewhere.
+if (process.env.NEXT_RUNTIME !== 'edge' && process.env.NODE_ENV === 'development') {
+  import('@opennextjs/cloudflare')
+    .then(({ initOpenNextCloudflareForDev }) => initOpenNextCloudflareForDev())
+    .catch(() => {
+      /* optional */
+    })
+}
+
 const pwaConfig = withPWA({
   dest: 'public',
   register: true,
