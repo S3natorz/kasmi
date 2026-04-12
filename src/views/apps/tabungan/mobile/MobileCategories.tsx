@@ -7,7 +7,6 @@ import type { ReactElement, Ref } from 'react'
 // MUI Imports
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import CircularProgress from '@mui/material/CircularProgress'
 import Fab from '@mui/material/Fab'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -26,6 +25,9 @@ import { useTheme } from '@mui/material/styles'
 
 // Utils
 import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
+
+// Skeletons
+import { MobileListSkeleton } from './MobileSkeletons'
 
 // Types
 import type { ExpenseCategoryType, SavingsCategoryType, StorageTypeType } from '@/types/apps/tabunganTypes'
@@ -281,11 +283,7 @@ const MobileCategories = ({ kind }: Props) => {
   }
 
   if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-        <CircularProgress size={32} />
-      </Box>
-    )
+    return <MobileListSkeleton rows={5} />
   }
 
   return (

@@ -7,12 +7,11 @@ import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
-import CircularProgress from '@mui/material/CircularProgress'
-import Fab from '@mui/material/Fab'
 import { useTheme } from '@mui/material/styles'
 
 // Component Imports
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
+import { SummaryCardSkeleton, StorageCardSkeleton } from './MobileSkeletons'
 
 // Types
 import type { StorageTypeType } from '@/types/apps/tabunganTypes'
@@ -97,8 +96,13 @@ const MobileStorages = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-        <CircularProgress size={32} />
+      <Box sx={{ px: 2, pt: 1.5 }}>
+        <SummaryCardSkeleton />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <StorageCardSkeleton key={i} />
+          ))}
+        </Box>
       </Box>
     )
   }

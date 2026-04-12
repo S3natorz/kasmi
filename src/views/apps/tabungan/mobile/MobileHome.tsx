@@ -9,7 +9,6 @@ import { useRouter, useParams } from 'next/navigation'
 // MUI Imports
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
-import CircularProgress from '@mui/material/CircularProgress'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
@@ -29,6 +28,7 @@ import AddTransactionDialog from '@/components/dialogs/AddTransactionDialog'
 import EditTransactionDialog from '@/components/dialogs/EditTransactionDialog'
 import TransactionsByTypeDialog from '@/components/dialogs/TransactionsByTypeDialog'
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
+import { MobileHomeSkeleton } from './MobileSkeletons'
 
 // Types
 import type { StorageTypeType, TransactionType } from '@/types/apps/tabunganTypes'
@@ -318,9 +318,7 @@ const MobileHome = () => {
       </Menu>
 
       {loading || !stats ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-          <CircularProgress />
-        </Box>
+        <MobileHomeSkeleton />
       ) : (
         <Box>
           <BalanceHero

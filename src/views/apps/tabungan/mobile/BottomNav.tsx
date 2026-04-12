@@ -1,5 +1,8 @@
 'use client'
 
+// React Imports
+import { useEffect } from 'react'
+
 // Next Imports
 import { usePathname, useRouter, useParams } from 'next/navigation'
 
@@ -40,6 +43,13 @@ const BottomNav = ({ onAddClick, onMenuClick }: Props) => {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
 
   const lang = (params?.lang as string) || 'en'
+
+  // Prefetch all nav routes on mount so tab switches are instant
+  useEffect(() => {
+    navItems.forEach(item => {
+      if (item.path) router.prefetch(`/${lang}${item.path}`)
+    })
+  }, [lang, router])
 
   const isActive = (path: string) => {
     if (!path) return false

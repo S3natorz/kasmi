@@ -46,6 +46,13 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
+  // Prefetch menu drawer routes so navigation feels instant
+  useEffect(() => {
+    menuItems.forEach(item => {
+      router.prefetch(`/${lang}${item.path}`)
+    })
+  }, [lang, router])
+
   // Hide outer VerticalLayout navbar + sidebar so we get true fullscreen mobile feel
   useEffect(() => {
     const styleId = 'kasmi-mobile-shell-style'

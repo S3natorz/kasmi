@@ -8,13 +8,14 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
 import Chip from '@mui/material/Chip'
-import CircularProgress from '@mui/material/CircularProgress'
 import InputBase from '@mui/material/InputBase'
 import IconButton from '@mui/material/IconButton'
 import { useTheme } from '@mui/material/styles'
 
 // Component Imports
 import EditTransactionDialog from '@/components/dialogs/EditTransactionDialog'
+import { TransactionRowSkeleton } from './MobileSkeletons'
+import Skeleton from '@mui/material/Skeleton'
 
 // Types
 import type { TransactionType } from '@/types/apps/tabunganTypes'
@@ -245,8 +246,25 @@ const MobileTransactions = () => {
       </Box>
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-          <CircularProgress size={32} />
+        <Box sx={{ px: 2 }}>
+          {[1, 2].map(group => (
+            <Box key={group} sx={{ mb: 2 }}>
+              <Skeleton variant='text' width={130} height={16} sx={{ mb: 1 }} />
+              <Box
+                sx={{
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#fafafa',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  border: 1,
+                  borderColor: 'divider'
+                }}
+              >
+                {[1, 2, 3].map((r, idx, arr) => (
+                  <TransactionRowSkeleton key={r} isLast={idx === arr.length - 1} />
+                ))}
+              </Box>
+            </Box>
+          ))}
         </Box>
       ) : filtered.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
