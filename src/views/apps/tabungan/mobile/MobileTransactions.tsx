@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 // MUI Imports
 import Box from '@mui/material/Box'
@@ -13,9 +13,13 @@ import IconButton from '@mui/material/IconButton'
 import { useTheme } from '@mui/material/styles'
 
 // Component Imports
+import Skeleton from '@mui/material/Skeleton'
+
 import EditTransactionDialog from '@/components/dialogs/EditTransactionDialog'
 import { TransactionRowSkeleton } from './MobileSkeletons'
-import Skeleton from '@mui/material/Skeleton'
+
+// Hooks
+import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
 
 // Types
 import type { TransactionType } from '@/types/apps/tabunganTypes'
@@ -48,6 +52,7 @@ const formatCurrency = (amount: number) => {
 
 const groupByDate = (txs: TransactionType[]) => {
   const groups: Record<string, TransactionType[]> = {}
+
   txs.forEach(tx => {
     const d = new Date(tx.date)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -63,6 +68,7 @@ const formatGroupHeader = (key: string) => {
   const d = new Date(key)
   const today = new Date()
   const yesterday = new Date()
+
   yesterday.setDate(today.getDate() - 1)
 
   if (d.toDateString() === today.toDateString()) return 'Hari Ini'
@@ -75,10 +81,14 @@ const MobileTransactions = () => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
 
-  const [data, setData] = useState<TransactionType[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: txData, isLoading, mutate } = useTabunganData<TransactionType[]>('/api/apps/tabungan/transactions')
+
+  const data = Array.isArray(txData) ? txData : []
+  const loading = isLoading && data.length === 0
+
   const [filter, setFilter] = useState<FilterType>('all')
   const [search, setSearch] = useState('')
+
   const [hideBalance, setHideBalance] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('hideBalances') === 'true'
@@ -90,33 +100,24 @@ const MobileTransactions = () => {
   const [editOpen, setEditOpen] = useState(false)
   const [selectedTx, setSelectedTx] = useState<TransactionType | null>(null)
 
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const res = await fetch('/api/apps/tabungan/transactions')
-      const json = await res.json()
-      setData(Array.isArray(json) ? json : [])
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
+  const refresh = () => {
+    mutate().catch(() => {})
+    invalidateTabuganKeys(['/api/apps/tabungan/stats', '/api/apps/tabungan/storage-types'])
   }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   const filtered = useMemo(() => {
     let list = data
+
     if (filter !== 'all') {
       list =
         filter === 'income'
           ? list.filter(t => t.type === 'income' || t.type === 'gold_income')
           : list.filter(t => t.type === filter)
     }
+
     if (search.trim()) {
       const q = search.toLowerCase()
+
       list = list.filter(
         t =>
           t.description?.toLowerCase().includes(q) ||
@@ -428,7 +429,7 @@ const MobileTransactions = () => {
         transaction={selectedTx}
         onSuccess={() => {
           setEditOpen(false)
-          fetchData()
+          refresh()
         }}
       />
     </Box>

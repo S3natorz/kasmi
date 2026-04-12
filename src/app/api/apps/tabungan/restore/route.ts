@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+
 import prisma from '@/libs/prisma'
+import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
 
 // POST - Restore data from JSON backup
 export async function POST(request: Request) {
@@ -113,12 +115,15 @@ export async function POST(request: Request) {
       transactions: transactions?.length || 0
     }
 
-    return NextResponse.json({
+    emitTabungan(TABUNGAN_EVENTS.DATA_RESTORED)
+    
+return NextResponse.json({
       message: 'Restore berhasil!',
       counts
     })
   } catch (error) {
     console.error('Restore failed:', error)
-    return NextResponse.json({ error: 'Gagal restore data' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Gagal restore data' }, { status: 500 })
   }
 }

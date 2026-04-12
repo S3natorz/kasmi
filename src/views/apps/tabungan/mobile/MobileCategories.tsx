@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { forwardRef, useEffect, useMemo, useState } from 'react'
+import { forwardRef, useMemo, useState } from 'react'
 import type { ReactElement, Ref } from 'react'
 
 // MUI Imports
@@ -28,6 +28,9 @@ import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swa
 
 // Skeletons
 import { MobileListSkeleton } from './MobileSkeletons'
+
+// Hooks
+import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
 
 // Types
 import type { ExpenseCategoryType, SavingsCategoryType, StorageTypeType } from '@/types/apps/tabunganTypes'
@@ -160,9 +163,13 @@ const MobileCategories = ({ kind }: Props) => {
   const emptyMsg = isSavings ? 'Belum ada kategori tabungan' : 'Belum ada kategori pengeluaran'
   const amountLabel = isSavings ? 'Target Tabungan (Rp)' : 'Budget Bulanan (Rp)'
 
-  const [data, setData] = useState<CategoryUnion[]>([])
-  const [storageTypes, setStorageTypes] = useState<StorageTypeType[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: categoriesData, isLoading, mutate } = useTabunganData<CategoryUnion[]>(apiPath)
+  const { data: storageData } = useTabunganData<StorageTypeType[]>('/api/apps/tabungan/storage-types')
+
+  const data = Array.isArray(categoriesData) ? categoriesData : []
+  const storageTypes = Array.isArray(storageData) ? storageData : []
+  const loading = isLoading && data.length === 0
+
   const [openDialog, setOpenDialog] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [colorAnchor, setColorAnchor] = useState<HTMLElement | null>(null)
@@ -176,24 +183,10 @@ const MobileCategories = ({ kind }: Props) => {
     storageTypeId: ''
   })
 
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const [catRes, storageRes] = await Promise.all([fetch(apiPath), fetch('/api/apps/tabungan/storage-types')])
-      const [categories, storages] = await Promise.all([catRes.json(), storageRes.json()])
-      setData(Array.isArray(categories) ? categories : [])
-      setStorageTypes(Array.isArray(storages) ? storages : [])
-    } catch (error) {
-      console.error('Failed to fetch data:', error)
-    } finally {
-      setLoading(false)
-    }
+  const refresh = () => {
+    mutate().catch(() => {})
+    invalidateTabuganKeys(['/api/apps/tabungan/stats'])
   }
-
-  useEffect(() => {
-    fetchData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind])
 
   const totalAmount = useMemo(() => {
     return data.reduce((sum, c) => {
@@ -237,6 +230,7 @@ const MobileCategories = ({ kind }: Props) => {
     try {
       const method = editingId ? 'PUT' : 'POST'
       const amountKey = isSavings ? 'targetAmount' : 'budgetLimit'
+
       const submitData: Record<string, unknown> = {
         name: formData.name,
         description: formData.description,
@@ -257,7 +251,7 @@ const MobileCategories = ({ kind }: Props) => {
       if (!res.ok) throw new Error('Failed to save')
 
       handleCloseDialog()
-      fetchData()
+      refresh()
       showSuccessToast(editingId ? 'Kategori berhasil diperbarui' : 'Kategori berhasil ditambahkan')
     } catch (error) {
       console.error('Failed to save category:', error)
@@ -273,7 +267,7 @@ const MobileCategories = ({ kind }: Props) => {
         const res = await fetch(`${apiPath}?id=${id}`, { method: 'DELETE' })
 
         if (!res.ok) throw new Error('Failed to delete')
-        fetchData()
+        refresh()
         showSuccessToast('Kategori berhasil dihapus')
       } catch (error) {
         console.error('Failed to delete category:', error)
@@ -334,6 +328,7 @@ const MobileCategories = ({ kind }: Props) => {
           const amt = isSavings
             ? (category as SavingsCategoryType).targetAmount
             : (category as ExpenseCategoryType).budgetLimit
+
           const accent = category.color || theme.palette.primary.main
 
           return (
@@ -536,6 +531,7 @@ const MobileCategories = ({ kind }: Props) => {
               value={formData.icon}
               onChange={(_, newValue) => {
                 const value = typeof newValue === 'string' ? newValue : newValue?.value || ''
+
                 setFormData({ ...formData, icon: value })
               }}
               onInputChange={(_, newValue) => setFormData({ ...formData, icon: newValue })}

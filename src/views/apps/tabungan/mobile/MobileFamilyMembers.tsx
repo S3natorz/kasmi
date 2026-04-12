@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { forwardRef, useEffect, useState } from 'react'
+import { forwardRef, useState } from 'react'
 import type { ReactElement, Ref } from 'react'
 
 // MUI Imports
@@ -29,6 +29,9 @@ import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swa
 // Skeletons
 import { MobileListSkeleton } from './MobileSkeletons'
 
+// Hooks
+import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
+
 const Transition = forwardRef(function Transition(
   props: SlideProps & { children: ReactElement },
   ref: Ref<unknown>
@@ -48,8 +51,11 @@ const MobileFamilyMembers = () => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
 
-  const [members, setMembers] = useState<FamilyMemberType[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, isLoading, mutate } = useTabunganData<FamilyMemberType[]>('/api/apps/tabungan/family-members')
+
+  const members = Array.isArray(data) ? data : []
+  const loading = isLoading && members.length === 0
+
   const [openDialog, setOpenDialog] = useState(false)
   const [editingMember, setEditingMember] = useState<FamilyMemberType | null>(null)
 
@@ -59,22 +65,10 @@ const MobileFamilyMembers = () => {
     avatar: ''
   })
 
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const res = await fetch('/api/apps/tabungan/family-members')
-      const data = await res.json()
-      setMembers(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Failed to fetch data:', error)
-    } finally {
-      setLoading(false)
-    }
+  const refresh = () => {
+    mutate().catch(() => {})
+    invalidateTabuganKeys(['/api/apps/tabungan/stats'])
   }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   const handleOpenDialog = (member?: FamilyMemberType) => {
     if (member) {
@@ -111,12 +105,13 @@ const MobileFamilyMembers = () => {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
+
         console.error('API Error:', errorData)
         throw new Error(errorData.error || 'Failed to save')
       }
 
       handleCloseDialog()
-      fetchData()
+      refresh()
       showSuccessToast(editingMember ? 'Anggota berhasil diperbarui' : 'Anggota berhasil ditambahkan')
     } catch (error) {
       console.error('Failed to save member:', error)
@@ -134,7 +129,7 @@ const MobileFamilyMembers = () => {
         })
 
         if (!res.ok) throw new Error('Failed to delete')
-        fetchData()
+        refresh()
         showSuccessToast('Anggota berhasil dihapus')
       } catch (error) {
         console.error('Failed to delete member:', error)

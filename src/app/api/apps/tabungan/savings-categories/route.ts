@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+
 import prisma from '@/libs/prisma'
+import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
 
 // GET - Get all savings categories
 export async function GET() {
@@ -8,7 +10,9 @@ export async function GET() {
       include: { storageType: true },
       orderBy: { createdAt: 'desc' }
     })
-    return NextResponse.json(categories)
+
+    
+return NextResponse.json(categories)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch savings categories' }, { status: 500 })
   }
@@ -18,6 +22,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
+
     const category = await prisma.savingsCategory.create({
       data: {
         name: body.name,
@@ -29,7 +34,10 @@ export async function POST(request: Request) {
       },
       include: { storageType: true }
     })
-    return NextResponse.json(category, { status: 201 })
+
+    emitTabungan(TABUNGAN_EVENTS.SAVINGS_CATEGORIES_CHANGED)
+    
+return NextResponse.json(category, { status: 201 })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create savings category' }, { status: 500 })
   }
@@ -39,6 +47,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json()
+
     const category = await prisma.savingsCategory.update({
       where: { id: body.id },
       data: {
@@ -51,7 +60,10 @@ export async function PUT(request: Request) {
       },
       include: { storageType: true }
     })
-    return NextResponse.json(category)
+
+    emitTabungan(TABUNGAN_EVENTS.SAVINGS_CATEGORIES_CHANGED)
+    
+return NextResponse.json(category)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update savings category' }, { status: 500 })
   }
@@ -70,7 +82,9 @@ export async function DELETE(request: Request) {
     await prisma.savingsCategory.delete({
       where: { id }
     })
-    return NextResponse.json({ message: 'Savings category deleted successfully' })
+    emitTabungan(TABUNGAN_EVENTS.SAVINGS_CATEGORIES_CHANGED)
+    
+return NextResponse.json({ message: 'Savings category deleted successfully' })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete savings category' }, { status: 500 })
   }

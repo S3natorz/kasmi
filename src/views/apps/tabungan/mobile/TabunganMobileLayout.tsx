@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 // Next Imports
 import { usePathname, useRouter, useParams } from 'next/navigation'
@@ -12,6 +12,7 @@ import Box from '@mui/material/Box'
 // Component Imports
 import MobileShell from './MobileShell'
 import TopBar from './TopBar'
+import TabunganRealtime from '@/libs/realtime/TabunganRealtime'
 
 type Props = {
   children: ReactNode
@@ -23,7 +24,8 @@ const pageMeta: Record<string, { title: string; subtitle?: string }> = {
   '/apps/tabungan/family-members': { title: 'Anggota Keluarga', subtitle: 'Kelola anggota' },
   '/apps/tabungan/categories/savings': { title: 'Kategori Tabungan', subtitle: 'Target & kategori' },
   '/apps/tabungan/categories/expenses': { title: 'Kategori Pengeluaran', subtitle: 'Kelompokkan pengeluaran' },
-  '/apps/tabungan/backup': { title: 'Backup & Restore', subtitle: 'Cadangan data' }
+  '/apps/tabungan/backup': { title: 'Backup & Restore', subtitle: 'Cadangan data' },
+  '/apps/tabungan/settings': { title: 'Pengaturan', subtitle: 'Menu & konfigurasi lainnya' }
 }
 
 const TabunganMobileLayout = ({ children }: Props) => {
@@ -40,6 +42,7 @@ const TabunganMobileLayout = ({ children }: Props) => {
 
   return (
     <MobileShell>
+      <TabunganRealtime />
       {!isDashboard && meta && (
         <TopBar
           title={meta.title}

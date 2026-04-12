@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+
 import prisma from '@/libs/prisma'
+import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
 
 // GET - Get all storage types
 export async function GET() {
@@ -7,7 +9,9 @@ export async function GET() {
     const storageTypes = await prisma.storageType.findMany({
       orderBy: { name: 'asc' }
     })
-    return NextResponse.json(storageTypes)
+
+    
+return NextResponse.json(storageTypes)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch storage types' }, { status: 500 })
   }
@@ -31,10 +35,14 @@ export async function POST(request: Request) {
         goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
       }
     })
-    return NextResponse.json(storageType, { status: 201 })
+
+    emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
+    
+return NextResponse.json(storageType, { status: 201 })
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'Failed to create storage type' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Failed to create storage type' }, { status: 500 })
   }
 }
 
@@ -57,7 +65,10 @@ export async function PUT(request: Request) {
         goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
       }
     })
-    return NextResponse.json(storageType)
+
+    emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
+    
+return NextResponse.json(storageType)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update storage type' }, { status: 500 })
   }
@@ -76,7 +87,9 @@ export async function DELETE(request: Request) {
     await prisma.storageType.delete({
       where: { id }
     })
-    return NextResponse.json({ message: 'Storage type deleted successfully' })
+    emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
+    
+return NextResponse.json({ message: 'Storage type deleted successfully' })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete storage type' }, { status: 500 })
   }

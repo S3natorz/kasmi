@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 // MUI Imports
 import Box from '@mui/material/Box'
@@ -12,6 +12,9 @@ import { useTheme } from '@mui/material/styles'
 // Component Imports
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
 import { SummaryCardSkeleton, StorageCardSkeleton } from './MobileSkeletons'
+
+// Hook Imports
+import { useTabunganData } from '@/hooks/useTabunganData'
 
 // Types
 import type { StorageTypeType } from '@/types/apps/tabunganTypes'
@@ -51,9 +54,16 @@ const MobileStorages = () => {
   const isDark = theme.palette.mode === 'dark'
   const gradients = isDark ? darkGradients : lightGradients
 
-  const [storages, setStorages] = useState<StorageTypeType[]>([])
-  const [goldPrice, setGoldPrice] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const { data: storagesData, isLoading: storagesLoading } = useTabunganData<StorageTypeType[]>(
+    '/api/apps/tabungan/storage-types'
+  )
+
+  const { data: goldData } = useTabunganData<{ pricePerGram?: number }>('/api/apps/tabungan/gold-price')
+
+  const storages = Array.isArray(storagesData) ? storagesData : []
+  const goldPrice = goldData?.pricePerGram || 0
+  const loading = storagesLoading && storages.length === 0
+
   const [hideBalance, setHideBalance] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('hideBalances') === 'true'
@@ -64,27 +74,6 @@ const MobileStorages = () => {
 
   const [selected, setSelected] = useState<StorageTypeType | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const [storageRes, goldRes] = await Promise.all([
-        fetch('/api/apps/tabungan/storage-types'),
-        fetch('/api/apps/tabungan/gold-price')
-      ])
-      const [s, g] = await Promise.all([storageRes.json(), goldRes.json()])
-      setStorages(Array.isArray(s) ? s : [])
-      setGoldPrice(g.pricePerGram || 0)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   const mask = (v: string) => (hideBalance ? '••••••' : v)
 

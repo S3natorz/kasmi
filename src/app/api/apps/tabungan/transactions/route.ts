@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
+
 import prisma from '@/libs/prisma'
+import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
 
 // Helper function to update storage balance
 async function updateStorageBalance(storageTypeId: string, amount: number, isAdd: boolean) {
   const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
+
   if (storage) {
     const newBalance = isAdd ? storage.balance + amount : storage.balance - amount
+
     console.log(`Updating storage ${storage.name}: ${storage.balance} ${isAdd ? '+' : '-'} ${amount} = ${newBalance}`)
     await prisma.storageType.update({
       where: { id: storageTypeId },
@@ -19,9 +23,11 @@ async function updateStorageBalance(storageTypeId: string, amount: number, isAdd
 // Helper function to update gold weight on storage
 async function updateGoldWeight(storageTypeId: string, grams: number, isAdd: boolean) {
   const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
+
   if (storage) {
     const currentWeight = storage.goldWeight || 0
     const newWeight = isAdd ? currentWeight + grams : currentWeight - grams
+
     console.log(`Updating gold ${storage.name}: ${currentWeight}g ${isAdd ? '+' : '-'} ${grams}g = ${newWeight}g`)
     await prisma.storageType.update({
       where: { id: storageTypeId },
@@ -73,7 +79,8 @@ export async function GET(request: Request) {
     return NextResponse.json(transactions)
   } catch (error) {
     console.error('Failed to fetch transactions:', error)
-    return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
   }
 }
 
@@ -99,6 +106,7 @@ export async function POST(request: Request) {
     if (body.type === 'gold_income') {
       if (body.toStorageTypeId && body.toStorageTypeId !== '') {
         const grams = parseFloat(body.goldGrams) || amount
+
         console.log('Gold Income: Adding', grams, 'grams to storage', body.toStorageTypeId)
         await updateGoldWeight(body.toStorageTypeId, grams, true)
       }
@@ -150,10 +158,14 @@ export async function POST(request: Request) {
         toStorageType: true
       }
     })
-    return NextResponse.json(transaction, { status: 201 })
+
+    emitTabungan(TABUNGAN_EVENTS.TRANSACTIONS_CHANGED)
+    
+return NextResponse.json(transaction, { status: 201 })
   } catch (error) {
     console.error('Failed to create transaction:', error)
-    return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
   }
 }
 
@@ -185,6 +197,7 @@ export async function PUT(request: Request) {
     // Apply new transaction effect
     if (body.type === 'gold_income' && body.toStorageTypeId) {
       const grams = parseFloat(body.goldGrams) || newAmount
+
       await updateGoldWeight(body.toStorageTypeId, grams, true)
     } else if (body.type === 'income' && body.toStorageTypeId) {
       await updateStorageBalance(body.toStorageTypeId, newAmount, true)
@@ -218,10 +231,14 @@ export async function PUT(request: Request) {
         toStorageType: true
       }
     })
-    return NextResponse.json(transaction)
+
+    emitTabungan(TABUNGAN_EVENTS.TRANSACTIONS_CHANGED)
+    
+return NextResponse.json(transaction)
   } catch (error) {
     console.error('Failed to update transaction:', error)
-    return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 })
   }
 }
 
@@ -255,9 +272,12 @@ export async function DELETE(request: Request) {
     }
 
     await prisma.transaction.delete({ where: { id } })
-    return NextResponse.json({ message: 'Transaction deleted successfully' })
+    emitTabungan(TABUNGAN_EVENTS.TRANSACTIONS_CHANGED)
+    
+return NextResponse.json({ message: 'Transaction deleted successfully' })
   } catch (error) {
     console.error('Failed to delete transaction:', error)
-    return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 })
   }
 }

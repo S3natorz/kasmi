@@ -1,21 +1,11 @@
 'use client'
 
 // React Imports
-import { useState, useEffect, ReactNode } from 'react'
-
-// Next Imports
-import { useRouter, useParams } from 'next/navigation'
+import type { ReactNode } from 'react';
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Box from '@mui/material/Box'
-import Drawer from '@mui/material/Drawer'
-import List from '@mui/material/List'
-import ListItem from '@mui/material/ListItem'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemIcon from '@mui/material/ListItemIcon'
-import ListItemText from '@mui/material/ListItemText'
-import Typography from '@mui/material/Typography'
-import Divider from '@mui/material/Divider'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
 
@@ -28,30 +18,12 @@ type Props = {
   onTransactionAdded?: () => void
 }
 
-const menuItems = [
-  { label: 'Anggota Keluarga', icon: 'tabler-users', path: '/apps/tabungan/family-members' },
-  { label: 'Kategori Tabungan', icon: 'tabler-pig-money', path: '/apps/tabungan/categories/savings' },
-  { label: 'Kategori Pengeluaran', icon: 'tabler-shopping-cart', path: '/apps/tabungan/categories/expenses' },
-  { label: 'Backup & Restore', icon: 'tabler-database', path: '/apps/tabungan/backup' }
-]
-
 const MobileShell = ({ children, onTransactionAdded }: Props) => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
-  const router = useRouter()
-  const params = useParams()
-  const lang = (params?.lang as string) || 'en'
 
   const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-
-  // Prefetch menu drawer routes so navigation feels instant
-  useEffect(() => {
-    menuItems.forEach(item => {
-      router.prefetch(`/${lang}${item.path}`)
-    })
-  }, [lang, router])
 
   // Hide outer VerticalLayout navbar + sidebar so we get true fullscreen mobile feel
   useEffect(() => {
@@ -80,17 +52,13 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
       `
       document.head.appendChild(styleEl)
     }
+
     document.body.classList.add('kasmi-mobile-active')
 
     return () => {
       document.body.classList.remove('kasmi-mobile-active')
     }
   }, [])
-
-  const handleMenuItemClick = (path: string) => {
-    router.push(`/${lang}${path}`)
-    setMenuOpen(false)
-  }
 
   return (
     <Box
@@ -117,7 +85,7 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
         {children}
       </Box>
 
-      <BottomNav onAddClick={() => setAddDialogOpen(true)} onMenuClick={() => setMenuOpen(true)} />
+      <BottomNav onAddClick={() => setAddDialogOpen(true)} />
 
       <AddTransactionDialog
         open={addDialogOpen}
@@ -127,57 +95,6 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
           onTransactionAdded?.()
         }}
       />
-
-      <Drawer
-        anchor='bottom'
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        PaperProps={{
-          sx: {
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            maxWidth: isDesktop ? 480 : '100%',
-            left: '50% !important',
-            right: 'auto !important',
-            transform: 'translateX(-50%) !important',
-            pb: 2
-          }
-        }}
-      >
-        <Box sx={{ width: 40, height: 4, backgroundColor: 'divider', borderRadius: 2, mx: 'auto', mt: 1.5, mb: 2 }} />
-        <Typography variant='h6' sx={{ px: 3, mb: 1, fontWeight: 700 }}>
-          Menu Lainnya
-        </Typography>
-        <Divider />
-        <List sx={{ pt: 1 }}>
-          {menuItems.map(item => (
-            <ListItem key={item.path} disablePadding>
-              <ListItemButton onClick={() => handleMenuItemClick(item.path)} sx={{ py: 1.5, px: 3 }}>
-                <ListItemIcon sx={{ minWidth: 42 }}>
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '10px',
-                      backgroundColor: 'rgba(115, 103, 240, 0.12)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <i className={item.icon} style={{ fontSize: 20, color: '#7367F0' }} />
-                  </Box>
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{ fontWeight: 600, fontSize: '0.95rem' }}
-                />
-                <i className='tabler-chevron-right' style={{ fontSize: 18, opacity: 0.4 }} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      </Drawer>
     </Box>
   )
 }

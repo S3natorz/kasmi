@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 
 // Next Imports
 import { useRouter, useParams } from 'next/navigation'
@@ -29,6 +29,9 @@ import EditTransactionDialog from '@/components/dialogs/EditTransactionDialog'
 import TransactionsByTypeDialog from '@/components/dialogs/TransactionsByTypeDialog'
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
 import { MobileHomeSkeleton } from './MobileSkeletons'
+
+// Hooks
+import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
 
 // Types
 import type { StorageTypeType, TransactionType } from '@/types/apps/tabunganTypes'
@@ -78,15 +81,19 @@ const getDateRange = (filterType: FilterType, selectedMonth: string) => {
 
     return { startDate: formatDateForApi(start), endDate: formatDateForApi(end) }
   }
+
   if (filterType === 'weekly') {
     const dayOfWeek = now.getDay()
     const startOfWeek = new Date(now)
+
     startOfWeek.setDate(now.getDate() - dayOfWeek)
     const endOfWeek = new Date(startOfWeek)
+
     endOfWeek.setDate(startOfWeek.getDate() + 6)
 
     return { startDate: formatDateForApi(startOfWeek), endDate: formatDateForApi(endOfWeek) }
   }
+
   if (filterType === 'daily') {
     return { startDate: formatDateForApi(now), endDate: formatDateForApi(now) }
   }
@@ -99,12 +106,9 @@ const MobileHome = () => {
   const params = useParams()
   const lang = (params?.lang as string) || 'en'
 
-  const [stats, setStats] = useState<StatsData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [goldPrice, setGoldPrice] = useState(0)
-
   // Period filter
   const [filterType, setFilterType] = useState<FilterType>('monthly')
+
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
 
@@ -123,6 +127,7 @@ const MobileHome = () => {
   const toggleHideBalance = () => {
     setHideBalance(prev => {
       const next = !prev
+
       localStorage.setItem('hideBalances', String(next))
 
       return next
@@ -146,46 +151,52 @@ const MobileHome = () => {
 
   const dateRange = useMemo(() => getDateRange(filterType, selectedMonth), [filterType, selectedMonth])
 
-  const fetchStats = async () => {
-    try {
-      setLoading(true)
-      const { startDate, endDate } = dateRange
-      const [statsRes, storageRes] = await Promise.all([
-        fetch(`/api/apps/tabungan/stats?startDate=${startDate}&endDate=${endDate}`),
-        fetch('/api/apps/tabungan/storage-types')
-      ])
-      const [data, storages] = await Promise.all([statsRes.json(), storageRes.json()])
-      setStats({
-        totalIncome: data.totalIncome || 0,
-        totalExpenses: data.totalExpenses || 0,
-        totalSavings: data.totalSavings || 0,
-        storageBalances: Array.isArray(storages) ? storages : [],
-        savingsByCategory: data.savingsByCategory || [],
-        expensesByCategory: data.expensesByCategory || [],
-        recentTransactions: data.recentTransactions || [],
-        transactionCount: data.transactionCount || 0
-      })
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const statsUrl = `/api/apps/tabungan/stats?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
 
-  const fetchGoldPrice = async () => {
-    try {
-      const res = await fetch('/api/apps/tabungan/gold-price')
-      const data = await res.json()
-      setGoldPrice(data.pricePerGram || 0)
-    } catch (error) {
-      console.error('Failed to fetch gold price:', error)
-    }
-  }
+  const { data: statsPayload, isLoading: statsLoading, mutate: mutateStats } = useTabunganData<{
+    totalIncome?: number
+    totalExpenses?: number
+    totalSavings?: number
+    savingsByCategory?: StatsData['savingsByCategory']
+    expensesByCategory?: StatsData['expensesByCategory']
+    recentTransactions?: TransactionType[]
+    transactionCount?: number
+  }>(statsUrl)
 
-  useEffect(() => {
-    fetchStats()
-    fetchGoldPrice()
-  }, [dateRange])
+  const { data: storagesPayload, isLoading: storagesLoading, mutate: mutateStorages } = useTabunganData<StorageTypeType[]>(
+    '/api/apps/tabungan/storage-types'
+  )
+
+  const { data: goldPayload, mutate: mutateGold } = useTabunganData<{ pricePerGram?: number }>(
+    '/api/apps/tabungan/gold-price',
+    { staleTime: 5 * 60_000 }
+  )
+
+  const goldPrice = goldPayload?.pricePerGram || 0
+
+  const stats = useMemo<StatsData | null>(() => {
+    if (!statsPayload && !storagesPayload) return null
+
+    return {
+      totalIncome: statsPayload?.totalIncome || 0,
+      totalExpenses: statsPayload?.totalExpenses || 0,
+      totalSavings: statsPayload?.totalSavings || 0,
+      storageBalances: Array.isArray(storagesPayload) ? storagesPayload : [],
+      savingsByCategory: statsPayload?.savingsByCategory || [],
+      expensesByCategory: statsPayload?.expensesByCategory || [],
+      recentTransactions: statsPayload?.recentTransactions || [],
+      transactionCount: statsPayload?.transactionCount || 0
+    }
+  }, [statsPayload, storagesPayload])
+
+  const loading = (statsLoading || storagesLoading) && !stats
+
+  const refetchAll = () => {
+    mutateStats().catch(() => {})
+    mutateStorages().catch(() => {})
+    mutateGold().catch(() => {})
+    invalidateTabuganKeys(['/api/apps/tabungan/transactions'])
+  }
 
   // Compute total balance
   const totalBalance = useMemo(() => {
@@ -205,6 +216,7 @@ const MobileHome = () => {
 
       return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
     }
+
     if (filterType === 'weekly') return 'Minggu Ini'
     if (filterType === 'daily') return 'Hari Ini'
 
@@ -242,6 +254,7 @@ const MobileHome = () => {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
       const label = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+
       options.push({ value, label })
     }
 
@@ -258,7 +271,7 @@ const MobileHome = () => {
             <IconButton size='small' onClick={e => setPeriodMenuAnchor(e.currentTarget)}>
               <i className='tabler-calendar-event' style={{ fontSize: 22 }} />
             </IconButton>
-            <IconButton size='small' onClick={fetchStats}>
+            <IconButton size='small' onClick={refetchAll}>
               <i className='tabler-refresh' style={{ fontSize: 22 }} />
             </IconButton>
           </>
@@ -367,7 +380,7 @@ const MobileHome = () => {
         onClose={() => setQuickAddOpen(false)}
         onSuccess={() => {
           setQuickAddOpen(false)
-          fetchStats()
+          refetchAll()
         }}
         initialVoiceData={quickType ? { type: quickType } : null}
       />
@@ -398,7 +411,7 @@ const MobileHome = () => {
         transaction={selectedTransaction}
         onSuccess={() => {
           setEditDialogOpen(false)
-          fetchStats()
+          refetchAll()
         }}
       />
     </>

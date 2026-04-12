@@ -26,15 +26,14 @@ const navItems: NavItem[] = [
   { key: 'transactions', label: 'Transaksi', icon: 'tabler-list-details', path: '/apps/tabungan/transactions' },
   { key: 'add', label: 'Tambah', icon: 'tabler-plus', path: '' },
   { key: 'storage', label: 'Dompet', icon: 'tabler-wallet', path: '/apps/tabungan/storage-types' },
-  { key: 'menu', label: 'Menu', icon: 'tabler-menu-2', path: '' }
+  { key: 'menu', label: 'Menu', icon: 'tabler-menu-2', path: '/apps/tabungan/settings' }
 ]
 
 type Props = {
   onAddClick?: () => void
-  onMenuClick?: () => void
 }
 
-const BottomNav = ({ onAddClick, onMenuClick }: Props) => {
+const BottomNav = ({ onAddClick }: Props) => {
   const router = useRouter()
   const pathname = usePathname()
   const params = useParams()
@@ -53,18 +52,17 @@ const BottomNav = ({ onAddClick, onMenuClick }: Props) => {
 
   const isActive = (path: string) => {
     if (!path) return false
-    return pathname?.includes(path)
+    
+return pathname?.includes(path)
   }
 
   const handleClick = (item: NavItem) => {
     if (item.key === 'add') {
       onAddClick?.()
-      return
+      
+return
     }
-    if (item.key === 'menu') {
-      onMenuClick?.()
-      return
-    }
+
     if (item.path) {
       router.push(`/${lang}${item.path}`)
     }
