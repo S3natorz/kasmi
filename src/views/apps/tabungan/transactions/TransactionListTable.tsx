@@ -52,6 +52,7 @@ import { TableSkeleton } from '@/components/skeletons'
 
 // Utils
 import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
+import { formatWibDate, wibDateKey, wibToday } from '@/libs/wib'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -134,7 +135,7 @@ const TransactionListTable = () => {
     type: 'income' as 'income' | 'expense' | 'savings' | 'transfer' | 'gold_income',
     amount: '',
     description: '',
-    date: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0],
+    date: wibToday(),
     familyMemberId: '',
     savingsCategoryId: '',
     expenseCategoryId: '',
@@ -190,7 +191,7 @@ const TransactionListTable = () => {
         type: transaction.type,
         amount: formatRupiahInput(transaction.amount.toString()),
         description: transaction.description || '',
-        date: new Date(transaction.date).toISOString().split('T')[0],
+        date: wibDateKey(transaction.date),
         familyMemberId: transaction.familyMemberId || '',
         savingsCategoryId: transaction.savingsCategoryId || '',
         expenseCategoryId: transaction.expenseCategoryId || '',
@@ -203,7 +204,7 @@ const TransactionListTable = () => {
         type: 'income',
         amount: '',
         description: '',
-        date: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0],
+        date: wibToday(),
         familyMemberId: '',
         savingsCategoryId: '',
         expenseCategoryId: '',
@@ -355,7 +356,7 @@ const TransactionListTable = () => {
         header: 'Tanggal',
         cell: ({ row }) => (
           <Typography>
-            {new Date(row.original.date).toLocaleDateString('id-ID', {
+            {formatWibDate(row.original.date, {
               day: 'numeric',
               month: 'short',
               year: 'numeric'

@@ -33,6 +33,17 @@ import { MobileHomeSkeleton } from './MobileSkeletons'
 // Hooks
 import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
 
+// Utils
+import {
+  formatWibDate,
+  getWibDayOfWeek,
+  wibDateAtNoon,
+  wibDateKey,
+  wibMonthRange,
+  wibThisMonth,
+  wibToday
+} from '@/libs/wib'
+
 // Types
 import type { StorageTypeType, TransactionType } from '@/types/apps/tabunganTypes'
 import type { TransactionFilterType } from '@/components/dialogs/TransactionsByTypeDialog'
@@ -63,42 +74,26 @@ type StatsData = {
   transactionCount: number
 }
 
-const formatDateForApi = (date: Date) => {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-
-  return `${y}-${m}-${d}`
-}
-
+// Date math lives in WIB so the stats filter agrees with what the API
+// interprets — otherwise a browser outside WIB silently shifts "today"
+// by a day against the server's window.
 const getDateRange = (filterType: FilterType, selectedMonth: string) => {
-  const now = new Date()
+  const today = wibToday()
 
   if (filterType === 'monthly') {
-    const [year, month] = selectedMonth.split('-').map(Number)
-    const start = new Date(year, month - 1, 1)
-    const end = new Date(year, month, 0)
-
-    return { startDate: formatDateForApi(start), endDate: formatDateForApi(end) }
+    return wibMonthRange(selectedMonth)
   }
 
   if (filterType === 'weekly') {
-    const dayOfWeek = now.getDay()
-    const startOfWeek = new Date(now)
+    const anchor = wibDateAtNoon(today)
+    const dayOfWeek = getWibDayOfWeek(anchor)
+    const startOfWeek = new Date(anchor.getTime() - dayOfWeek * 24 * 60 * 60 * 1000)
+    const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000)
 
-    startOfWeek.setDate(now.getDate() - dayOfWeek)
-    const endOfWeek = new Date(startOfWeek)
-
-    endOfWeek.setDate(startOfWeek.getDate() + 6)
-
-    return { startDate: formatDateForApi(startOfWeek), endDate: formatDateForApi(endOfWeek) }
+    return { startDate: wibDateKey(startOfWeek), endDate: wibDateKey(endOfWeek) }
   }
 
-  if (filterType === 'daily') {
-    return { startDate: formatDateForApi(now), endDate: formatDateForApi(now) }
-  }
-
-  return { startDate: formatDateForApi(now), endDate: formatDateForApi(now) }
+  return { startDate: today, endDate: today }
 }
 
 const MobileHome = () => {
@@ -109,11 +104,7 @@ const MobileHome = () => {
   // Period filter
   const [filterType, setFilterType] = useState<FilterType>('monthly')
 
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date()
-
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  })
+  const [selectedMonth, setSelectedMonth] = useState(() => wibThisMonth())
 
   // Hide balance toggle
   const [hideBalance, setHideBalance] = useState<boolean>(() => {
@@ -213,8 +204,10 @@ const MobileHome = () => {
   const periodLabel = useMemo(() => {
     if (filterType === 'monthly') {
       const [y, m] = selectedMonth.split('-')
+      // Anchor at noon UTC on day 15 → safely inside the intended month for WIB formatting.
+      const anchor = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, 15, 5, 0, 0))
 
-      return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+      return formatWibDate(anchor, { month: 'long', year: 'numeric' })
     }
 
     if (filterType === 'weekly') return 'Minggu Ini'
@@ -248,12 +241,14 @@ const MobileHome = () => {
 
   const getMonthOptions = () => {
     const options = []
-    const now = new Date()
+    const [yearStr, monthStr] = wibThisMonth().split('-')
+    const year = Number(yearStr)
+    const month = Number(monthStr)
 
     for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      const label = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+      const anchor = new Date(Date.UTC(year, month - 1 - i, 15, 5, 0, 0))
+      const value = formatWibDate(anchor, { year: 'numeric', month: '2-digit' }, 'sv-SE')
+      const label = formatWibDate(anchor, { month: 'long', year: 'numeric' })
 
       options.push({ value, label })
     }

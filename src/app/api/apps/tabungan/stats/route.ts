@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/libs/prisma'
+import { wibStartOfDay, wibEndOfDay, wibMonthRange } from '@/libs/wib'
 
 // GET - Get dashboard statistics
 export async function GET(request: Request) {
@@ -12,25 +13,20 @@ export async function GET(request: Request) {
     let dateFilter: any = {}
 
     if (startDateParam && endDateParam) {
-      // New date range filter (use WIB/UTC+7 timezone boundaries)
-      const startDate = new Date(startDateParam + 'T00:00:00+07:00')
-      const endDate = new Date(endDateParam + 'T23:59:59.999+07:00')
+      // New date range filter (WIB/UTC+7 boundaries)
       dateFilter = {
         date: {
-          gte: startDate,
-          lte: endDate
+          gte: wibStartOfDay(startDateParam),
+          lte: wibEndOfDay(endDateParam)
         }
       }
     } else if (month) {
       // Legacy month filter for backward compatibility
-      const [year, monthNum] = month.split('-').map(Number)
-      const lastDay = new Date(year, monthNum, 0).getDate()
-      const startDate = new Date(`${year}-${String(monthNum).padStart(2, '0')}-01T00:00:00+07:00`)
-      const endDate = new Date(`${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59.999+07:00`)
+      const { startDate, endDate } = wibMonthRange(month)
       dateFilter = {
         date: {
-          gte: startDate,
-          lte: endDate
+          gte: wibStartOfDay(startDate),
+          lte: wibEndOfDay(endDate)
         }
       }
     }

@@ -21,6 +21,9 @@ import { TransactionRowSkeleton } from './MobileSkeletons'
 // Hooks
 import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
 
+// Utils
+import { formatWibDateKey, isWibToday, isWibYesterday, wibDateKey } from '@/libs/wib'
+
 // Types
 import type { TransactionType } from '@/types/apps/tabunganTypes'
 
@@ -54,8 +57,7 @@ const groupByDate = (txs: TransactionType[]) => {
   const groups: Record<string, TransactionType[]> = {}
 
   txs.forEach(tx => {
-    const d = new Date(tx.date)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const key = wibDateKey(tx.date)
 
     if (!groups[key]) groups[key] = []
     groups[key].push(tx)
@@ -65,16 +67,10 @@ const groupByDate = (txs: TransactionType[]) => {
 }
 
 const formatGroupHeader = (key: string) => {
-  const d = new Date(key)
-  const today = new Date()
-  const yesterday = new Date()
+  if (isWibToday(key)) return 'Hari Ini'
+  if (isWibYesterday(key)) return 'Kemarin'
 
-  yesterday.setDate(today.getDate() - 1)
-
-  if (d.toDateString() === today.toDateString()) return 'Hari Ini'
-  if (d.toDateString() === yesterday.toDateString()) return 'Kemarin'
-
-  return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  return formatWibDateKey(key, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 const MobileTransactions = () => {

@@ -21,6 +21,7 @@ import VoiceTransactionButton from '@/components/VoiceTransactionButton'
 import { showSuccessToast, showErrorToast } from '@/utils/swal'
 import { fuzzyMatchName } from '@/utils/voiceTransactionParser'
 import type { ParsedTransaction } from '@/utils/voiceTransactionParser'
+import { wibToday } from '@/libs/wib'
 
 // Types
 import type {
@@ -55,7 +56,7 @@ const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Pr
     amount: '',
     goldGrams: '',
     description: '',
-    date: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0],
+    date: wibToday(),
     familyMemberId: '',
     savingsCategoryId: '',
     expenseCategoryId: '',
@@ -115,7 +116,7 @@ const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Pr
         amount: '',
         goldGrams: '',
         description: '',
-        date: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0],
+        date: wibToday(),
         familyMemberId: '',
         savingsCategoryId: '',
         expenseCategoryId: '',

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import prisma from '@/libs/prisma'
 import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
+import { wibDateAtNoon, wibStartOfDay, wibEndOfDay, wibToday } from '@/libs/wib'
 
 // Helper function to update storage balance
 async function updateStorageBalance(storageTypeId: string, amount: number, isAdd: boolean) {
@@ -55,8 +56,8 @@ export async function GET(request: Request) {
 
     if (startDate || endDate) {
       where.date = {}
-      if (startDate) where.date.gte = new Date(startDate + 'T00:00:00+07:00')
-      if (endDate) where.date.lte = new Date(endDate + 'T23:59:59.999+07:00')
+      if (startDate) where.date.gte = wibStartOfDay(startDate)
+      if (endDate) where.date.lte = wibEndOfDay(endDate)
     }
 
     // Filter by storageTypeId (either from or to)
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
         type: body.type,
         amount: amount,
         description: body.description || null,
-        date: body.date ? new Date(body.date + 'T12:00:00+07:00') : new Date(),
+        date: wibDateAtNoon(body.date || wibToday()),
         familyMemberId: body.familyMemberId && body.familyMemberId !== '' ? body.familyMemberId : null,
         savingsCategoryId: body.savingsCategoryId && body.savingsCategoryId !== '' ? body.savingsCategoryId : null,
         expenseCategoryId: body.expenseCategoryId && body.expenseCategoryId !== '' ? body.expenseCategoryId : null,
@@ -160,7 +161,7 @@ export async function POST(request: Request) {
     })
 
     emitTabungan(TABUNGAN_EVENTS.TRANSACTIONS_CHANGED)
-    
+
 return NextResponse.json(transaction, { status: 201 })
   } catch (error) {
     console.error('Failed to create transaction:', error)
@@ -216,7 +217,7 @@ export async function PUT(request: Request) {
         type: body.type,
         amount: newAmount,
         description: body.description || null,
-        date: body.date ? new Date(body.date + 'T12:00:00+07:00') : undefined,
+        date: body.date ? wibDateAtNoon(body.date) : undefined,
         familyMemberId: body.familyMemberId && body.familyMemberId !== '' ? body.familyMemberId : null,
         savingsCategoryId: body.savingsCategoryId && body.savingsCategoryId !== '' ? body.savingsCategoryId : null,
         expenseCategoryId: body.expenseCategoryId && body.expenseCategoryId !== '' ? body.expenseCategoryId : null,

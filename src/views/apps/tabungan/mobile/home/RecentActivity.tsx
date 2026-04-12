@@ -12,6 +12,9 @@ import Chip from '@mui/material/Chip'
 // Type Imports
 import type { TransactionType } from '@/types/apps/tabunganTypes'
 
+// Utils
+import { formatWibDate, isWibToday, isWibYesterday } from '@/libs/wib'
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -21,15 +24,10 @@ const formatCurrency = (amount: number) => {
 }
 
 const formatDate = (date: Date | string) => {
-  const d = new Date(date)
-  const today = new Date()
-  const yesterday = new Date()
-  yesterday.setDate(today.getDate() - 1)
+  if (isWibToday(date)) return 'Hari ini'
+  if (isWibYesterday(date)) return 'Kemarin'
 
-  if (d.toDateString() === today.toDateString()) return 'Hari ini'
-  if (d.toDateString() === yesterday.toDateString()) return 'Kemarin'
-
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+  return formatWibDate(date, { day: 'numeric', month: 'short' })
 }
 
 type FilterType = 'all' | 'income' | 'expense' | 'savings' | 'transfer'

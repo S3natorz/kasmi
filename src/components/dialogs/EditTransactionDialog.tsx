@@ -23,6 +23,7 @@ import VoiceTransactionButton from '@/components/VoiceTransactionButton'
 import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
 import { fuzzyMatchName } from '@/utils/voiceTransactionParser'
 import type { ParsedTransaction } from '@/utils/voiceTransactionParser'
+import { wibDateKey, wibToday } from '@/libs/wib'
 
 // Types
 import type {
@@ -58,7 +59,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
     amount: '',
     goldGrams: '',
     description: '',
-    date: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0],
+    date: wibToday(),
     familyMemberId: '',
     savingsCategoryId: '',
     expenseCategoryId: '',
@@ -106,7 +107,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
         amount: transaction.type === 'gold_income' ? '' : formatRupiahInput(transaction.amount.toString()),
         goldGrams: transaction.type === 'gold_income' ? transaction.amount.toString() : '',
         description: transaction.description || '',
-        date: new Date(transaction.date).toISOString().split('T')[0],
+        date: wibDateKey(transaction.date),
         familyMemberId: transaction.familyMemberId || '',
         savingsCategoryId: transaction.savingsCategoryId || '',
         expenseCategoryId: transaction.expenseCategoryId || '',
