@@ -1,10 +1,12 @@
-// Schema untuk Vercel Postgres / Neon / Supabase
-// Rename file ini menjadi schema.prisma sebelum deploy ke Vercel
+// Schema untuk Supabase Postgres (diakses via pg + @prisma/adapter-pg
+// di Cloudflare Workers). Gunakan URL Supavisor Session mode (port 5432)
+// untuk `DATABASE_URL`; Transaction mode (port 6543) akan memecah
+// `prisma.$transaction([...])` di route restore.
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Untuk Vercel Postgres
+  directUrl = env("DIRECT_URL") // Opsional: koneksi direct Supabase untuk migration
 }
 
 generator client {

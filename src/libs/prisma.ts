@@ -1,17 +1,29 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaNeon } from '@prisma/adapter-neon'
-import { neonConfig } from '@neondatabase/serverless'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
 
 /**
- * Prisma client configured for Neon over the Cloudflare Workers runtime.
+ * Prisma client configured for Supabase Postgres over the Cloudflare Workers
+ * runtime.
  *
- * Notes:
- * - `@prisma/adapter-neon` + `@neondatabase/serverless` lets Prisma run on
- *   edge-style runtimes (Workers) where the default TCP driver can't be used.
- * - `neonConfig.poolQueryViaFetch = true` routes one-shot queries over HTTP
- *   (no websocket cost); `$transaction` still uses pooled WebSockets.
- * - In Node (dev / prisma CLI / build), we cache on `globalThis` to survive
- *   HMR; on Workers each isolate gets its own cached instance, which is fine.
+ * Connection string guidance for `DATABASE_URL`:
+ *
+ *   ┌────────────────────────────────────────────────────────────────────┐
+ *   │ Use the **Session mode** Supavisor pooler URL (port 5432):        │
+ *   │                                                                    │
+ *   │   postgres://postgres.<project-ref>:<pwd>@aws-0-<region>           │
+ *   │     .pooler.supabase.com:5432/postgres                             │
+ *   │                                                                    │
+ *   │ Session mode preserves per-connection state, which Prisma needs   │
+ *   │ for `$transaction([...])` used by /api/.../restore. Transaction   │
+ *   │ mode (port 6543) would break those batches.                       │
+ *   └────────────────────────────────────────────────────────────────────┘
+ *
+ * `pg` runs on Workers thanks to the `nodejs_compat` compatibility flag
+ * (set in wrangler.toml) which exposes Node's TCP socket API.
+ *
+ * A small `max: 3` keeps us well inside Supabase's default pooler limits
+ * across many Worker isolates.
  */
 
 const globalForPrisma = globalThis as unknown as {
@@ -25,10 +37,14 @@ const buildClient = () => {
     throw new Error('DATABASE_URL is not set')
   }
 
-  neonConfig.poolQueryViaFetch = true
+  const pool = new Pool({
+    connectionString,
+    max: 3,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000
+  })
 
-  // PrismaNeon accepts a Neon PoolConfig; it builds/owns the underlying pool.
-  const adapter = new PrismaNeon({ connectionString })
+  const adapter = new PrismaPg(pool)
 
   return new PrismaClient({ adapter })
 }
