@@ -31,7 +31,7 @@ const actions: Action[] = [
   {
     key: 'savings',
     label: 'Tabungan',
-    icon: 'tabler-pig-money',
+    icon: 'tabler-coin',
     color: '#00BAD1',
     bgColor: 'rgba(0, 186, 209, 0.12)'
   },

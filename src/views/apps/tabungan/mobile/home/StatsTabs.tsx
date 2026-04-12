@@ -65,7 +65,7 @@ const StatsTabs = ({
       key: 'savings',
       label: 'Tabungan',
       value: totalSavings,
-      icon: 'tabler-pig-money',
+      icon: 'tabler-coin',
       color: '#00BAD1',
       bgColor: 'rgba(0, 186, 209, 0.08)',
       format: 'currency'

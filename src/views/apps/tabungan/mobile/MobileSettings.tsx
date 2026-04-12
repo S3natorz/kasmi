@@ -44,7 +44,7 @@ const groups: MenuGroup[] = [
       {
         label: 'Kategori Tabungan',
         description: 'Target & kategori tabungan',
-        icon: 'tabler-pig-money',
+        icon: 'tabler-coin',
         path: '/apps/tabungan/categories/savings',
         color: '#28C76F',
         bg: 'rgba(40, 199, 111, 0.12)'

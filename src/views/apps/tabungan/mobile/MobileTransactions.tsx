@@ -30,7 +30,7 @@ const filters: { key: FilterType; label: string; icon: string }[] = [
   { key: 'all', label: 'Semua', icon: 'tabler-list' },
   { key: 'income', label: 'Masuk', icon: 'tabler-arrow-down-left' },
   { key: 'expense', label: 'Keluar', icon: 'tabler-arrow-up-right' },
-  { key: 'savings', label: 'Tabungan', icon: 'tabler-pig-money' },
+  { key: 'savings', label: 'Tabungan', icon: 'tabler-coin' },
   { key: 'transfer', label: 'Transfer', icon: 'tabler-transfer' }
 ]
 
@@ -38,7 +38,7 @@ const typeConfig: Record<string, { icon: string; color: string; bg: string; sign
   income: { icon: 'tabler-arrow-down-left', color: '#28C76F', bg: 'rgba(40, 199, 111, 0.12)', sign: '+' },
   gold_income: { icon: 'tabler-coin', color: '#FFB300', bg: 'rgba(255, 179, 0, 0.12)', sign: '+' },
   expense: { icon: 'tabler-arrow-up-right', color: '#FF4C51', bg: 'rgba(255, 76, 81, 0.12)', sign: '-' },
-  savings: { icon: 'tabler-pig-money', color: '#00BAD1', bg: 'rgba(0, 186, 209, 0.12)', sign: '↗' },
+  savings: { icon: 'tabler-coin', color: '#00BAD1', bg: 'rgba(0, 186, 209, 0.12)', sign: '↗' },
   transfer: { icon: 'tabler-transfer', color: '#FF9F43', bg: 'rgba(255, 159, 67, 0.12)', sign: '↔' }
 }
 

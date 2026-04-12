@@ -74,7 +74,7 @@ const SavingsGoals = ({ savings, hideBalance }: Props) => {
                   }}
                 >
                   <i
-                    className={item.icon || 'tabler-pig-money'}
+                    className={item.icon || 'tabler-coin'}
                     style={{ fontSize: 20, color: accentColor }}
                   />
                 </Box>

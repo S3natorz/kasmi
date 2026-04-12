@@ -84,7 +84,7 @@ const verticalMenuData = (dictionary: Awaited<ReturnType<typeof getDictionary>>)
     children: [
       {
         label: 'Tabungan Keluarga',
-        icon: 'tabler-piggy-bank',
+        icon: 'tabler-coin',
         children: [
           {
             label: 'Dashboard',

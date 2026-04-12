@@ -56,7 +56,7 @@ const formatRupiahInput = (value: string) => value.replace(/\D/g, '').replace(/\
 const parseRupiahInput = (value: string) => value.replace(/\./g, '')
 
 const savingsIcons = [
-  { label: 'Tabungan', value: 'tabler-piggy-bank' },
+  { label: 'Tabungan', value: 'tabler-coins' },
   { label: 'Dompet', value: 'tabler-wallet' },
   { label: 'Uang', value: 'tabler-cash' },
   { label: 'Koin', value: 'tabler-coin' },
@@ -309,7 +309,7 @@ const MobileCategories = ({ kind }: Props) => {
             }}
           >
             <i
-              className={isSavings ? 'tabler-pig-money' : 'tabler-shopping-cart'}
+              className={isSavings ? 'tabler-coin' : 'tabler-shopping-cart'}
               style={{ fontSize: 18, color: theme.palette.primary.main }}
             />
           </Box>
@@ -364,7 +364,7 @@ const MobileCategories = ({ kind }: Props) => {
                   }}
                 >
                   <i
-                    className={category.icon || (isSavings ? 'tabler-piggy-bank' : 'tabler-shopping-cart')}
+                    className={category.icon || (isSavings ? 'tabler-coin' : 'tabler-shopping-cart')}
                     style={{ fontSize: 22, color: accent }}
                   />
                 </Box>
@@ -464,7 +464,7 @@ const MobileCategories = ({ kind }: Props) => {
       {data.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
           <i
-            className={isSavings ? 'tabler-pig-money' : 'tabler-shopping-cart-off'}
+            className={isSavings ? 'tabler-coin' : 'tabler-shopping-cart-off'}
             style={{ fontSize: 64, opacity: 0.3 }}
           />
           <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>{emptyMsg}</Typography>

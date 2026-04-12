@@ -80,7 +80,7 @@ const parseRupiahInput = (value: string) => {
 // Icon suggestions for savings categories
 const iconSuggestions = [
   // Keuangan
-  { label: 'Tabungan', value: 'tabler-piggy-bank' },
+  { label: 'Tabungan', value: 'tabler-coins' },
   { label: 'Dompet', value: 'tabler-wallet' },
   { label: 'Uang', value: 'tabler-cash' },
   { label: 'Koin', value: 'tabler-coin' },

@@ -100,7 +100,6 @@ const iconSuggestions = [
   { label: 'Crypto', value: 'tabler-currency-bitcoin' },
   // Lainnya
   { label: 'Brankas', value: 'tabler-safe' },
-  { label: 'Celengan', value: 'tabler-piggy-bank' },
   { label: 'Tabungan', value: 'tabler-moneybag' }
 ]
 
