@@ -3,6 +3,17 @@
 @import 'tailwindcss/utilities.css' layer(utilities) important;
 @plugin 'tailwindcss-logical';
 
+/* Self-hosted Public Sans (replaces next/font/google — avoids build-time
+   fetch to fonts.googleapis.com which is blocked in some sandboxed CI
+   environments and adds a network dependency to every build). */
+@import '@fontsource/public-sans/300.css';
+@import '@fontsource/public-sans/400.css';
+@import '@fontsource/public-sans/500.css';
+@import '@fontsource/public-sans/600.css';
+@import '@fontsource/public-sans/700.css';
+@import '@fontsource/public-sans/800.css';
+@import '@fontsource/public-sans/900.css';
+
 @theme {
   --radius-none: 0px;
   --radius-xs: var(--mui-shape-customBorderRadius-xs);

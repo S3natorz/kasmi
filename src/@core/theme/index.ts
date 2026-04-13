@@ -1,6 +1,3 @@
-// Next Imports
-import { Public_Sans } from 'next/font/google'
-
 // MUI Imports
 import type { Theme } from '@mui/material/styles'
 
@@ -16,7 +13,11 @@ import shadows from './shadows'
 import customShadows from './customShadows'
 import typography from './typography'
 
-const public_sans = Public_Sans({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800', '900'] })
+// Public Sans is loaded via @fontsource in src/app/globals.css — keeps the
+// build hermetic (no runtime fetch of fonts.googleapis.com, which is
+// blocked in some sandboxed environments).
+const PUBLIC_SANS_STACK =
+  '"Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
 
 const theme = (settings: Settings, mode: SystemMode, direction: Theme['direction']): Theme => {
   return {
@@ -35,7 +36,7 @@ const theme = (settings: Settings, mode: SystemMode, direction: Theme['direction
       }
     },
     shadows: shadows(mode),
-    typography: typography(public_sans.style.fontFamily),
+    typography: typography(PUBLIC_SANS_STACK),
     customShadows: customShadows(mode),
     mainColorChannels: {
       light: '47 43 61',

@@ -45,3 +45,10 @@ next-env.d.ts
 # icon generated file
 src/assets/iconify-icons/generated-icons.js
 src/assets/iconify-icons/generated-icons.css
+
+# prisma-client generator output (regenerated on `npm install` via postinstall)
+src/generated/
+
+# next-pwa service worker output (regenerated on `next build`)
+public/sw.js
+public/workbox-*.js

@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
@@ -31,6 +31,7 @@
     "@emotion/styled": "11.14.1",
     "@floating-ui/dom": "1.7.4",
     "@floating-ui/react": "0.27.16",
+    "@fontsource/public-sans": "^5.2.7",
     "@formatjs/intl-localematcher": "0.6.2",
     "@formkit/drag-and-drop": "0.5.3",
     "@fullcalendar/common": "5.11.5",

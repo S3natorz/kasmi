@@ -10,7 +10,15 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  // The new `prisma-client` generator (Prisma 6+) emits a pure-ESM client
+  // that omits the native libssl/library-engine probe which calls
+  // fs.readdir at runtime and explodes on Cloudflare Workers' unenv-based
+  // Node compat shim. `prisma-client-js` (the legacy default) still
+  // bundles that probe even when a driver adapter is used.
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  runtime      = "cloudflare"
+  moduleFormat = "esm"
 }
 
 model Account {
