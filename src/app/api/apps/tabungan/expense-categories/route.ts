@@ -13,7 +13,13 @@ export async function GET() {
       })
     )
 
-    return NextResponse.json(categories)
+    return NextResponse.json(categories, {
+      headers: {
+        // Categories rarely change; sockets invalidate on writes so a
+        // generous SWR window keeps repeat navigations instant.
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=120'
+      }
+    })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch expense categories' }, { status: 500 })
   }

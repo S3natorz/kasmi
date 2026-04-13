@@ -33,38 +33,71 @@ export async function GET(request: Request) {
     }
 
     const payload = await withPrisma(async prisma => {
-      // Fan-out all four queries in parallel — on cold pools each query
-      // costs a TCP round-trip, so awaiting them sequentially used to add
-      // ~3x the slowest-query latency for no good reason.
-      const [transactions, savingsCategories, expenseCategories, familyMembers] = await Promise.all([
-        prisma.transaction.findMany({
-          where: dateFilter,
-          include: {
-            familyMember: true,
-            savingsCategory: true,
-            expenseCategory: true,
-            fromStorageType: true,
-            toStorageType: true
-          },
-          orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
-        }),
-        prisma.savingsCategory.findMany(),
-        prisma.expenseCategory.findMany(),
-        prisma.familyMember.findMany()
-      ])
+      // Split the previous "findMany with include" into two queries:
+      //  1. `aggRows` — strips relations and selects only the fields needed
+      //     for the in-memory `reduce`/`filter` math below. Per-row payload
+      //     drops from ~600B to ~80B, which matters because the date range
+      //     can include hundreds of rows.
+      //  2. `recentTransactions` — capped at 10 with full relations for
+      //     display, served by the new `(date desc, createdAt desc)` index.
+      //
+      // All five queries fan out in parallel; on cold pools each one costs
+      // a TCP round-trip, so awaiting sequentially used to add ~5x the
+      // slowest-query latency for no good reason.
+      const [aggRows, recentTransactions, transactionCount, savingsCategories, expenseCategories, familyMembers] =
+        await Promise.all([
+          prisma.transaction.findMany({
+            where: dateFilter,
+            select: {
+              type: true,
+              amount: true,
+              familyMemberId: true,
+              savingsCategoryId: true,
+              expenseCategoryId: true
+            }
+          }),
+          prisma.transaction.findMany({
+            where: dateFilter,
+            select: {
+              id: true,
+              type: true,
+              amount: true,
+              description: true,
+              date: true,
+              familyMemberId: true,
+              savingsCategoryId: true,
+              expenseCategoryId: true,
+              fromStorageTypeId: true,
+              toStorageTypeId: true,
+              createdAt: true,
+              updatedAt: true,
+              familyMember: { select: { id: true, name: true, role: true, avatar: true } },
+              savingsCategory: { select: { id: true, name: true, icon: true, color: true } },
+              expenseCategory: { select: { id: true, name: true, icon: true, color: true } },
+              fromStorageType: { select: { id: true, name: true, icon: true, color: true, isGold: true } },
+              toStorageType: { select: { id: true, name: true, icon: true, color: true, isGold: true } }
+            },
+            orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+            take: 10
+          }),
+          prisma.transaction.count({ where: dateFilter }),
+          prisma.savingsCategory.findMany(),
+          prisma.expenseCategory.findMany(),
+          prisma.familyMember.findMany()
+        ])
 
       // Calculate totals
-      const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
+      const totalIncome = aggRows.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
 
-      const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
+      const totalExpenses = aggRows.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
 
-      const totalSavings = transactions.filter(t => t.type === 'savings').reduce((sum, t) => sum + t.amount, 0)
+      const totalSavings = aggRows.filter(t => t.type === 'savings').reduce((sum, t) => sum + t.amount, 0)
 
       const balance = totalIncome - totalExpenses - totalSavings
 
       // Get savings by category
       const savingsByCategory = savingsCategories.map(cat => {
-        const amount = transactions
+        const amount = aggRows
           .filter(t => t.type === 'savings' && t.savingsCategoryId === cat.id)
           .reduce((sum, t) => sum + t.amount, 0)
         return {
@@ -78,7 +111,7 @@ export async function GET(request: Request) {
 
       // Get expenses by category
       const expensesByCategory = expenseCategories.map(cat => {
-        const amount = transactions
+        const amount = aggRows
           .filter(t => t.type === 'expense' && t.expenseCategoryId === cat.id)
           .reduce((sum, t) => sum + t.amount, 0)
         return {
@@ -92,10 +125,10 @@ export async function GET(request: Request) {
 
       // Get family members contribution
       const memberContributions = familyMembers.map(member => {
-        const income = transactions
+        const income = aggRows
           .filter(t => t.type === 'income' && t.familyMemberId === member.id)
           .reduce((sum, t) => sum + t.amount, 0)
-        const savings = transactions
+        const savings = aggRows
           .filter(t => t.type === 'savings' && t.familyMemberId === member.id)
           .reduce((sum, t) => sum + t.amount, 0)
         return {
@@ -107,9 +140,6 @@ export async function GET(request: Request) {
         }
       })
 
-      // Recent transactions (last 10)
-      const recentTransactions = transactions.slice(0, 10)
-
       return {
         totalIncome,
         totalExpenses,
@@ -119,11 +149,18 @@ export async function GET(request: Request) {
         expensesByCategory: expensesByCategory.filter(e => e.amount > 0),
         memberContributions,
         recentTransactions,
-        transactionCount: transactions.length
+        transactionCount
       }
     })
 
-    return NextResponse.json(payload)
+    return NextResponse.json(payload, {
+      headers: {
+        // Match the transactions route — sockets invalidate on writes, so
+        // a short max-age + SWR is safe and makes back/forward navigation
+        // and dashboard re-renders feel instant.
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60'
+      }
+    })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Failed to fetch statistics' }, { status: 500 })

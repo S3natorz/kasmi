@@ -16,7 +16,13 @@ export async function GET() {
 
     console.log('Found', members.length, 'family members')
 
-    return NextResponse.json(members)
+    return NextResponse.json(members, {
+      headers: {
+        // Family members rarely change; let the browser serve repeat
+        // navigations from cache while a background revalidation runs.
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=120'
+      }
+    })
   } catch (error) {
     console.error('Failed to fetch family members:', error)
 

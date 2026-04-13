@@ -5,6 +5,30 @@ import { withPrisma } from '@/libs/prisma'
 import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
 import { wibDateAtNoon, wibStartOfDay, wibEndOfDay, wibToday } from '@/libs/wib'
 
+// Single source of truth for the `select` shape used by every read in this
+// route — keeps GET and POST/PUT response payloads identical so SWR caches
+// stay coherent, and prevents accidentally adding new heavy fields to one
+// path but not another.
+const TX_SELECT = {
+  id: true,
+  type: true,
+  amount: true,
+  description: true,
+  date: true,
+  familyMemberId: true,
+  savingsCategoryId: true,
+  expenseCategoryId: true,
+  fromStorageTypeId: true,
+  toStorageTypeId: true,
+  createdAt: true,
+  updatedAt: true,
+  familyMember: { select: { id: true, name: true, role: true, avatar: true } },
+  savingsCategory: { select: { id: true, name: true, icon: true, color: true } },
+  expenseCategory: { select: { id: true, name: true, icon: true, color: true } },
+  fromStorageType: { select: { id: true, name: true, icon: true, color: true, isGold: true } },
+  toStorageType: { select: { id: true, name: true, icon: true, color: true, isGold: true } }
+} as const
+
 // Helper function to update storage balance
 async function updateStorageBalance(prisma: PrismaClient, storageTypeId: string, amount: number, isAdd: boolean) {
   const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
@@ -69,18 +93,25 @@ export async function GET(request: Request) {
     const transactions = await withPrisma(prisma =>
       prisma.transaction.findMany({
         where,
-        include: {
-          familyMember: true,
-          savingsCategory: true,
-          expenseCategory: true,
-          fromStorageType: true,
-          toStorageType: true
-        },
+        // `select` instead of `include` so we only ship the columns the UI
+        // actually renders. The full StorageType row (accountNumber, balance,
+        // isGold, goldWeight, createdAt, updatedAt, ...) was inflating each
+        // transaction by ~400 bytes; on a list of 500 rows that's 200 KB of
+        // dead weight per response.
+        select: TX_SELECT,
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
       })
     )
 
-    return NextResponse.json(transactions)
+    return NextResponse.json(transactions, {
+      headers: {
+        // Allow the browser to serve the cached payload instantly while a
+        // background revalidation refetches. Sockets and the SWR cache
+        // already invalidate on writes, so a short max-age is safe and
+        // makes back/forward navigation feel instant.
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60'
+      }
+    })
   } catch (error) {
     console.error('Failed to fetch transactions:', error)
 
@@ -155,13 +186,7 @@ export async function POST(request: Request) {
           fromStorageTypeId: body.fromStorageTypeId && body.fromStorageTypeId !== '' ? body.fromStorageTypeId : null,
           toStorageTypeId: body.toStorageTypeId && body.toStorageTypeId !== '' ? body.toStorageTypeId : null
         },
-        include: {
-          familyMember: true,
-          savingsCategory: true,
-          expenseCategory: true,
-          fromStorageType: true,
-          toStorageType: true
-        }
+        select: TX_SELECT
       })
     })
 
@@ -230,13 +255,7 @@ export async function PUT(request: Request) {
           fromStorageTypeId: body.fromStorageTypeId && body.fromStorageTypeId !== '' ? body.fromStorageTypeId : null,
           toStorageTypeId: body.toStorageTypeId && body.toStorageTypeId !== '' ? body.toStorageTypeId : null
         },
-        include: {
-          familyMember: true,
-          savingsCategory: true,
-          expenseCategory: true,
-          fromStorageType: true,
-          toStorageType: true
-        }
+        select: TX_SELECT
       })
     })
 

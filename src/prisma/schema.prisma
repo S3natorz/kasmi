@@ -157,4 +157,20 @@ model Transaction {
 
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+
+  // Indexes that match the actual access patterns in the API:
+  //   - GET /api/apps/tabungan/transactions sorts by `(date desc, createdAt desc)`
+  //     and optionally filters by `type`, `familyMemberId`, and date range.
+  //   - GET /api/apps/tabungan/stats filters by date range only.
+  //   - storage-type filters use `OR` on from/to ids — separate single-column
+  //     indexes let Postgres bitmap-OR them efficiently.
+  // Without these, every list query is a sequential scan + in-memory sort,
+  // which is the single biggest source of "get transaksi" latency.
+  @@index([date(sort: Desc), createdAt(sort: Desc)])
+  @@index([type, date(sort: Desc)])
+  @@index([familyMemberId])
+  @@index([fromStorageTypeId])
+  @@index([toStorageTypeId])
+  @@index([savingsCategoryId])
+  @@index([expenseCategoryId])
 }

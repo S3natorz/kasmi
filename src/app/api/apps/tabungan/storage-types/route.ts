@@ -12,7 +12,14 @@ export async function GET() {
       })
     )
 
-    return NextResponse.json(storageTypes)
+    return NextResponse.json(storageTypes, {
+      headers: {
+        // Sockets invalidate the SWR cache the moment a storage type
+        // changes, so a short max-age + SWR is safe and lets the browser
+        // serve back/forward navigations instantly while it revalidates.
+        'Cache-Control': 'private, max-age=10, stale-while-revalidate=60'
+      }
+    })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch storage types' }, { status: 500 })
   }
