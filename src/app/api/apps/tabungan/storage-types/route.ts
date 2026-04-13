@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/libs/prisma'
+import { withPrisma } from '@/libs/prisma'
 import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
 
 // GET - Get all storage types
 export async function GET() {
   try {
-    const storageTypes = await prisma.storageType.findMany({
-      orderBy: { name: 'asc' }
-    })
+    const storageTypes = await withPrisma(prisma =>
+      prisma.storageType.findMany({
+        orderBy: { name: 'asc' }
+      })
+    )
 
-    
-return NextResponse.json(storageTypes)
+    return NextResponse.json(storageTypes)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch storage types' }, { status: 500 })
   }
@@ -23,26 +24,28 @@ export async function POST(request: Request) {
     const body = await request.json()
     const isGold = body.isGold === true || body.isGold === 'true'
 
-    const storageType = await prisma.storageType.create({
-      data: {
-        name: body.name,
-        description: body.description || null,
-        icon: body.icon || null,
-        color: body.color || null,
-        accountNumber: body.accountNumber || null,
-        balance: body.balance ? parseFloat(body.balance) : 0,
-        isGold: isGold,
-        goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
-      }
-    })
+    const storageType = await withPrisma(prisma =>
+      prisma.storageType.create({
+        data: {
+          name: body.name,
+          description: body.description || null,
+          icon: body.icon || null,
+          color: body.color || null,
+          accountNumber: body.accountNumber || null,
+          balance: body.balance ? parseFloat(body.balance) : 0,
+          isGold: isGold,
+          goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
+        }
+      })
+    )
 
     emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
-    
-return NextResponse.json(storageType, { status: 201 })
+
+    return NextResponse.json(storageType, { status: 201 })
   } catch (error) {
     console.error(error)
-    
-return NextResponse.json({ error: 'Failed to create storage type' }, { status: 500 })
+
+    return NextResponse.json({ error: 'Failed to create storage type' }, { status: 500 })
   }
 }
 
@@ -52,23 +55,25 @@ export async function PUT(request: Request) {
     const body = await request.json()
     const isGold = body.isGold === true || body.isGold === 'true'
 
-    const storageType = await prisma.storageType.update({
-      where: { id: body.id },
-      data: {
-        name: body.name,
-        description: body.description || null,
-        icon: body.icon || null,
-        color: body.color || null,
-        accountNumber: body.accountNumber || null,
-        balance: body.balance ? parseFloat(body.balance) : 0,
-        isGold: isGold,
-        goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
-      }
-    })
+    const storageType = await withPrisma(prisma =>
+      prisma.storageType.update({
+        where: { id: body.id },
+        data: {
+          name: body.name,
+          description: body.description || null,
+          icon: body.icon || null,
+          color: body.color || null,
+          accountNumber: body.accountNumber || null,
+          balance: body.balance ? parseFloat(body.balance) : 0,
+          isGold: isGold,
+          goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
+        }
+      })
+    )
 
     emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
-    
-return NextResponse.json(storageType)
+
+    return NextResponse.json(storageType)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update storage type' }, { status: 500 })
   }
@@ -84,12 +89,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
-    await prisma.storageType.delete({
-      where: { id }
-    })
+    await withPrisma(prisma =>
+      prisma.storageType.delete({
+        where: { id }
+      })
+    )
     emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
-    
-return NextResponse.json({ message: 'Storage type deleted successfully' })
+
+    return NextResponse.json({ message: 'Storage type deleted successfully' })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete storage type' }, { status: 500 })
   }

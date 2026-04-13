@@ -12,31 +12,48 @@ import { PrismaClient } from '@/generated/prisma/client'
  * Prisma client configured for Supabase Postgres over the Cloudflare Workers
  * runtime.
  *
+ * =============================================================================
+ *  Why a factory instead of a singleton
+ * =============================================================================
+ *
+ * Cloudflare Workers enforce a strict rule: I/O objects (TCP sockets, streams,
+ * ...) are bound to the request that created them. Reusing a socket in a
+ * later request throws:
+ *
+ *   "Cannot perform I/O on behalf of a different request."
+ *
+ * `pg.Pool` keeps idle `pg.Client` instances around (each holding a live
+ * socket) and hands them to the next `pool.query()` caller — so the moment
+ * a second request checks out an idle client that was opened during the
+ * first request, the Worker throws an unhandled exception (Cloudflare
+ * surfaces it as HTTP `error code: 1101`). That's exactly what was
+ * happening across every `/api/apps/tabungan/*` route on the deployed
+ * Worker, producing intermittent 5xx spikes.
+ *
+ * The fix is to give each request its own pool. `withPrisma(fn)` below
+ * creates a fresh `Pool` + `PrismaClient`, passes the client to the
+ * caller, and disposes the pool when the callback resolves. All queries
+ * in one request share one pool (and therefore one I/O context); nothing
+ * leaks across requests.
+ *
  * Connection string guidance for `DATABASE_URL`:
  *
  *   ┌────────────────────────────────────────────────────────────────────┐
- *   │ Use the **Session mode** Supavisor pooler URL (port 5432):        │
+ *   │ Use the **Session mode** Supavisor pooler URL (port 5432):         │
  *   │                                                                    │
  *   │   postgres://postgres.<project-ref>:<pwd>@aws-0-<region>           │
  *   │     .pooler.supabase.com:5432/postgres                             │
  *   │                                                                    │
- *   │ Session mode preserves per-connection state, which Prisma needs   │
- *   │ for `$transaction([...])` used by /api/.../restore. Transaction   │
- *   │ mode (port 6543) would break those batches.                       │
+ *   │ Session mode preserves per-connection state, which Prisma needs    │
+ *   │ for `$transaction([...])` used by /api/.../restore. Transaction    │
+ *   │ mode (port 6543) would break those batches.                        │
  *   └────────────────────────────────────────────────────────────────────┘
  *
  * `pg` runs on Workers thanks to the `nodejs_compat` compatibility flag
  * (set in wrangler.toml) which exposes Node's TCP socket API.
- *
- * A small `max: 3` keeps us well inside Supabase's default pooler limits
- * across many Worker isolates.
  */
 
-const globalForPrisma = globalThis as unknown as {
-  __kasmiPrisma?: PrismaClient
-}
-
-const buildClient = () => {
+const buildClient = (): { client: PrismaClient; dispose: () => Promise<void> } => {
   const connectionString = process.env.DATABASE_URL
 
   if (!connectionString) {
@@ -51,14 +68,112 @@ const buildClient = () => {
   })
 
   const adapter = new PrismaPg(pool)
+  const client = new PrismaClient({ adapter })
 
-  return new PrismaClient({ adapter })
+  return {
+    client,
+    dispose: async () => {
+      try {
+        await pool.end()
+      } catch {
+        // Pool may already be ended or disposed; swallow.
+      }
+    }
+  }
 }
 
-export const prisma: PrismaClient = globalForPrisma.__kasmiPrisma ?? buildClient()
+/**
+ * Open a short-lived Prisma client bound to the current request.
+ *
+ *   return withPrisma(async prisma => {
+ *     const rows = await prisma.transaction.findMany(...)
+ *     return NextResponse.json(rows)
+ *   })
+ *
+ * The underlying `pg.Pool` is `end()`ed after the callback settles, so no
+ * sockets survive past the request boundary. Exceptions thrown inside
+ * `fn` propagate to the caller after the pool is disposed.
+ */
+export const withPrisma = async <T>(fn: (prisma: PrismaClient) => Promise<T>): Promise<T> => {
+  const { client, dispose } = buildClient()
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.__kasmiPrisma = prisma
+  try {
+    return await fn(client)
+  } finally {
+    await dispose()
+  }
 }
+
+/**
+ * Proxy default export for consumers that hold a long-lived reference to
+ * the client and call single operations on it (notably NextAuth's
+ * `PrismaAdapter`, which is instantiated once at module eval). Each
+ * method call opens a fresh pool, runs one operation, and disposes — slow
+ * but correct on the Worker.
+ *
+ * Do NOT use this proxy for multi-query routes: each call pays a full
+ * TCP handshake. Use `withPrisma` instead, which amortises the pool
+ * over the whole request.
+ *
+ * Also do NOT use this proxy for `$transaction([...])` with an array of
+ * `PrismaPromise`s: each element would be executed on its own pool
+ * before `$transaction` ever sees them. Use `withPrisma` for those.
+ */
+const makeProxy = (): PrismaClient => {
+  const topLevelPassthrough = new Set([
+    '$connect',
+    '$disconnect',
+    '$transaction',
+    '$queryRaw',
+    '$queryRawUnsafe',
+    '$executeRaw',
+    '$executeRawUnsafe',
+    '$extends',
+    '$use',
+    '$on'
+  ])
+
+  const runOnFreshClient = async (apply: (c: PrismaClient) => Promise<unknown>) => {
+    const { client, dispose } = buildClient()
+
+    try {
+      return await apply(client)
+    } finally {
+      await dispose()
+    }
+  }
+
+  return new Proxy({} as PrismaClient, {
+    get(_target, prop) {
+      if (typeof prop !== 'string') return undefined
+
+      if (topLevelPassthrough.has(prop)) {
+        return (...args: unknown[]) =>
+          runOnFreshClient(c => (c as unknown as Record<string, (...a: unknown[]) => Promise<unknown>>)[prop](...args))
+      }
+
+      // Treat every other property as a model delegate (prisma.<model>.<op>).
+      return new Proxy(
+        {},
+        {
+          get(_t2, opName) {
+            if (typeof opName !== 'string') return undefined
+
+            return (...args: unknown[]) =>
+              runOnFreshClient(c => {
+                const model = (c as unknown as Record<string, Record<string, (...a: unknown[]) => Promise<unknown>>>)[
+                  prop
+                ]
+
+                return model[opName](...args)
+              })
+          }
+        }
+      )
+    }
+  })
+}
+
+export const prisma: PrismaClient = makeProxy()
 
 export default prisma

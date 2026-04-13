@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/libs/prisma'
+import { withPrisma } from '@/libs/prisma'
 import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
 
 // GET - Get all savings categories
 export async function GET() {
   try {
-    const categories = await prisma.savingsCategory.findMany({
-      include: { storageType: true },
-      orderBy: { createdAt: 'desc' }
-    })
+    const categories = await withPrisma(prisma =>
+      prisma.savingsCategory.findMany({
+        include: { storageType: true },
+        orderBy: { createdAt: 'desc' }
+      })
+    )
 
-    
-return NextResponse.json(categories)
+    return NextResponse.json(categories)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch savings categories' }, { status: 500 })
   }
@@ -23,21 +24,23 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    const category = await prisma.savingsCategory.create({
-      data: {
-        name: body.name,
-        description: body.description || null,
-        icon: body.icon || null,
-        color: body.color || null,
-        targetAmount: body.targetAmount ? parseFloat(body.targetAmount) : null,
-        storageTypeId: body.storageTypeId && body.storageTypeId !== '' ? body.storageTypeId : null
-      },
-      include: { storageType: true }
-    })
+    const category = await withPrisma(prisma =>
+      prisma.savingsCategory.create({
+        data: {
+          name: body.name,
+          description: body.description || null,
+          icon: body.icon || null,
+          color: body.color || null,
+          targetAmount: body.targetAmount ? parseFloat(body.targetAmount) : null,
+          storageTypeId: body.storageTypeId && body.storageTypeId !== '' ? body.storageTypeId : null
+        },
+        include: { storageType: true }
+      })
+    )
 
     emitTabungan(TABUNGAN_EVENTS.SAVINGS_CATEGORIES_CHANGED)
-    
-return NextResponse.json(category, { status: 201 })
+
+    return NextResponse.json(category, { status: 201 })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create savings category' }, { status: 500 })
   }
@@ -48,22 +51,24 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json()
 
-    const category = await prisma.savingsCategory.update({
-      where: { id: body.id },
-      data: {
-        name: body.name,
-        description: body.description,
-        icon: body.icon,
-        color: body.color,
-        targetAmount: body.targetAmount ? parseFloat(body.targetAmount) : null,
-        storageTypeId: body.storageTypeId && body.storageTypeId !== '' ? body.storageTypeId : null
-      },
-      include: { storageType: true }
-    })
+    const category = await withPrisma(prisma =>
+      prisma.savingsCategory.update({
+        where: { id: body.id },
+        data: {
+          name: body.name,
+          description: body.description,
+          icon: body.icon,
+          color: body.color,
+          targetAmount: body.targetAmount ? parseFloat(body.targetAmount) : null,
+          storageTypeId: body.storageTypeId && body.storageTypeId !== '' ? body.storageTypeId : null
+        },
+        include: { storageType: true }
+      })
+    )
 
     emitTabungan(TABUNGAN_EVENTS.SAVINGS_CATEGORIES_CHANGED)
-    
-return NextResponse.json(category)
+
+    return NextResponse.json(category)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update savings category' }, { status: 500 })
   }
@@ -79,12 +84,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
-    await prisma.savingsCategory.delete({
-      where: { id }
-    })
+    await withPrisma(prisma =>
+      prisma.savingsCategory.delete({
+        where: { id }
+      })
+    )
     emitTabungan(TABUNGAN_EVENTS.SAVINGS_CATEGORIES_CHANGED)
-    
-return NextResponse.json({ message: 'Savings category deleted successfully' })
+
+    return NextResponse.json({ message: 'Savings category deleted successfully' })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete savings category' }, { status: 500 })
   }

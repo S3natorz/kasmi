@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/libs/prisma'
+import type { PrismaClient } from '@/generated/prisma/client'
+import { withPrisma } from '@/libs/prisma'
 import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
 import { wibDateAtNoon, wibStartOfDay, wibEndOfDay, wibToday } from '@/libs/wib'
 
 // Helper function to update storage balance
-async function updateStorageBalance(storageTypeId: string, amount: number, isAdd: boolean) {
+async function updateStorageBalance(prisma: PrismaClient, storageTypeId: string, amount: number, isAdd: boolean) {
   const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
 
   if (storage) {
@@ -22,7 +23,7 @@ async function updateStorageBalance(storageTypeId: string, amount: number, isAdd
 }
 
 // Helper function to update gold weight on storage
-async function updateGoldWeight(storageTypeId: string, grams: number, isAdd: boolean) {
+async function updateGoldWeight(prisma: PrismaClient, storageTypeId: string, grams: number, isAdd: boolean) {
   const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
 
   if (storage) {
@@ -65,23 +66,25 @@ export async function GET(request: Request) {
       where.OR = [{ fromStorageTypeId: storageTypeId }, { toStorageTypeId: storageTypeId }]
     }
 
-    const transactions = await prisma.transaction.findMany({
-      where,
-      include: {
-        familyMember: true,
-        savingsCategory: true,
-        expenseCategory: true,
-        fromStorageType: true,
-        toStorageType: true
-      },
-      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
-    })
+    const transactions = await withPrisma(prisma =>
+      prisma.transaction.findMany({
+        where,
+        include: {
+          familyMember: true,
+          savingsCategory: true,
+          expenseCategory: true,
+          fromStorageType: true,
+          toStorageType: true
+        },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
+      })
+    )
 
     return NextResponse.json(transactions)
   } catch (error) {
     console.error('Failed to fetch transactions:', error)
-    
-return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
+
+    return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
   }
 }
 
@@ -104,69 +107,71 @@ export async function POST(request: Request) {
     // 3. Savings (Tabungan) -> mengambil dari fromStorageType
     // 4. Transfer -> dari fromStorageType ke toStorageType
 
-    if (body.type === 'gold_income') {
-      if (body.toStorageTypeId && body.toStorageTypeId !== '') {
-        const grams = parseFloat(body.goldGrams) || amount
+    const transaction = await withPrisma(async prisma => {
+      if (body.type === 'gold_income') {
+        if (body.toStorageTypeId && body.toStorageTypeId !== '') {
+          const grams = parseFloat(body.goldGrams) || amount
 
-        console.log('Gold Income: Adding', grams, 'grams to storage', body.toStorageTypeId)
-        await updateGoldWeight(body.toStorageTypeId, grams, true)
+          console.log('Gold Income: Adding', grams, 'grams to storage', body.toStorageTypeId)
+          await updateGoldWeight(prisma, body.toStorageTypeId, grams, true)
+        }
+      } else if (body.type === 'income') {
+        if (body.toStorageTypeId && body.toStorageTypeId !== '') {
+          console.log('Income: Adding to storage', body.toStorageTypeId)
+          await updateStorageBalance(prisma, body.toStorageTypeId, amount, true)
+        }
+      } else if (body.type === 'expense') {
+        if (body.fromStorageTypeId && body.fromStorageTypeId !== '') {
+          console.log('Expense: Subtracting from storage', body.fromStorageTypeId)
+          await updateStorageBalance(prisma, body.fromStorageTypeId, amount, false)
+        }
+      } else if (body.type === 'savings') {
+        if (body.fromStorageTypeId && body.fromStorageTypeId !== '') {
+          console.log('Savings: Subtracting from storage', body.fromStorageTypeId)
+          await updateStorageBalance(prisma, body.fromStorageTypeId, amount, false)
+        }
+      } else if (body.type === 'transfer') {
+        if (
+          body.fromStorageTypeId &&
+          body.fromStorageTypeId !== '' &&
+          body.toStorageTypeId &&
+          body.toStorageTypeId !== ''
+        ) {
+          console.log('Transfer: From', body.fromStorageTypeId, 'To', body.toStorageTypeId)
+          await updateStorageBalance(prisma, body.fromStorageTypeId, amount, false)
+          await updateStorageBalance(prisma, body.toStorageTypeId, amount, true)
+        }
       }
-    } else if (body.type === 'income') {
-      if (body.toStorageTypeId && body.toStorageTypeId !== '') {
-        console.log('Income: Adding to storage', body.toStorageTypeId)
-        await updateStorageBalance(body.toStorageTypeId, amount, true)
-      }
-    } else if (body.type === 'expense') {
-      if (body.fromStorageTypeId && body.fromStorageTypeId !== '') {
-        console.log('Expense: Subtracting from storage', body.fromStorageTypeId)
-        await updateStorageBalance(body.fromStorageTypeId, amount, false)
-      }
-    } else if (body.type === 'savings') {
-      if (body.fromStorageTypeId && body.fromStorageTypeId !== '') {
-        console.log('Savings: Subtracting from storage', body.fromStorageTypeId)
-        await updateStorageBalance(body.fromStorageTypeId, amount, false)
-      }
-    } else if (body.type === 'transfer') {
-      if (
-        body.fromStorageTypeId &&
-        body.fromStorageTypeId !== '' &&
-        body.toStorageTypeId &&
-        body.toStorageTypeId !== ''
-      ) {
-        console.log('Transfer: From', body.fromStorageTypeId, 'To', body.toStorageTypeId)
-        await updateStorageBalance(body.fromStorageTypeId, amount, false)
-        await updateStorageBalance(body.toStorageTypeId, amount, true)
-      }
-    }
 
-    const transaction = await prisma.transaction.create({
-      data: {
-        type: body.type,
-        amount: amount,
-        description: body.description || null,
-        date: wibDateAtNoon(body.date || wibToday()),
-        familyMemberId: body.familyMemberId && body.familyMemberId !== '' ? body.familyMemberId : null,
-        savingsCategoryId: body.savingsCategoryId && body.savingsCategoryId !== '' ? body.savingsCategoryId : null,
-        expenseCategoryId: body.expenseCategoryId && body.expenseCategoryId !== '' ? body.expenseCategoryId : null,
-        fromStorageTypeId: body.fromStorageTypeId && body.fromStorageTypeId !== '' ? body.fromStorageTypeId : null,
-        toStorageTypeId: body.toStorageTypeId && body.toStorageTypeId !== '' ? body.toStorageTypeId : null
-      },
-      include: {
-        familyMember: true,
-        savingsCategory: true,
-        expenseCategory: true,
-        fromStorageType: true,
-        toStorageType: true
-      }
+      return prisma.transaction.create({
+        data: {
+          type: body.type,
+          amount: amount,
+          description: body.description || null,
+          date: wibDateAtNoon(body.date || wibToday()),
+          familyMemberId: body.familyMemberId && body.familyMemberId !== '' ? body.familyMemberId : null,
+          savingsCategoryId: body.savingsCategoryId && body.savingsCategoryId !== '' ? body.savingsCategoryId : null,
+          expenseCategoryId: body.expenseCategoryId && body.expenseCategoryId !== '' ? body.expenseCategoryId : null,
+          fromStorageTypeId: body.fromStorageTypeId && body.fromStorageTypeId !== '' ? body.fromStorageTypeId : null,
+          toStorageTypeId: body.toStorageTypeId && body.toStorageTypeId !== '' ? body.toStorageTypeId : null
+        },
+        include: {
+          familyMember: true,
+          savingsCategory: true,
+          expenseCategory: true,
+          fromStorageType: true,
+          toStorageType: true
+        }
+      })
     })
 
     emitTabungan(TABUNGAN_EVENTS.TRANSACTIONS_CHANGED)
 
-return NextResponse.json(transaction, { status: 201 })
+    return NextResponse.json(transaction, { status: 201 })
   } catch (error) {
     console.error('Failed to create transaction:', error)
-    
-return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
+
+    return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
   }
 }
 
@@ -176,70 +181,72 @@ export async function PUT(request: Request) {
     const body = await request.json()
     const newAmount = parseFloat(body.amount)
 
-    // Get old transaction to reverse its effect
-    const oldTx = await prisma.transaction.findUnique({ where: { id: body.id } })
+    const transaction = await withPrisma(async prisma => {
+      // Get old transaction to reverse its effect
+      const oldTx = await prisma.transaction.findUnique({ where: { id: body.id } })
 
-    if (oldTx) {
-      // Reverse old transaction effect
-      if (oldTx.type === 'gold_income' && oldTx.toStorageTypeId) {
-        await updateGoldWeight(oldTx.toStorageTypeId, oldTx.amount, false)
-      } else if (oldTx.type === 'income' && oldTx.toStorageTypeId) {
-        await updateStorageBalance(oldTx.toStorageTypeId, oldTx.amount, false)
-      } else if (oldTx.type === 'expense' && oldTx.fromStorageTypeId) {
-        await updateStorageBalance(oldTx.fromStorageTypeId, oldTx.amount, true)
-      } else if (oldTx.type === 'savings' && oldTx.fromStorageTypeId) {
-        await updateStorageBalance(oldTx.fromStorageTypeId, oldTx.amount, true)
-      } else if (oldTx.type === 'transfer') {
-        if (oldTx.fromStorageTypeId) await updateStorageBalance(oldTx.fromStorageTypeId, oldTx.amount, true)
-        if (oldTx.toStorageTypeId) await updateStorageBalance(oldTx.toStorageTypeId, oldTx.amount, false)
+      if (oldTx) {
+        // Reverse old transaction effect
+        if (oldTx.type === 'gold_income' && oldTx.toStorageTypeId) {
+          await updateGoldWeight(prisma, oldTx.toStorageTypeId, oldTx.amount, false)
+        } else if (oldTx.type === 'income' && oldTx.toStorageTypeId) {
+          await updateStorageBalance(prisma, oldTx.toStorageTypeId, oldTx.amount, false)
+        } else if (oldTx.type === 'expense' && oldTx.fromStorageTypeId) {
+          await updateStorageBalance(prisma, oldTx.fromStorageTypeId, oldTx.amount, true)
+        } else if (oldTx.type === 'savings' && oldTx.fromStorageTypeId) {
+          await updateStorageBalance(prisma, oldTx.fromStorageTypeId, oldTx.amount, true)
+        } else if (oldTx.type === 'transfer') {
+          if (oldTx.fromStorageTypeId) await updateStorageBalance(prisma, oldTx.fromStorageTypeId, oldTx.amount, true)
+          if (oldTx.toStorageTypeId) await updateStorageBalance(prisma, oldTx.toStorageTypeId, oldTx.amount, false)
+        }
       }
-    }
 
-    // Apply new transaction effect
-    if (body.type === 'gold_income' && body.toStorageTypeId) {
-      const grams = parseFloat(body.goldGrams) || newAmount
+      // Apply new transaction effect
+      if (body.type === 'gold_income' && body.toStorageTypeId) {
+        const grams = parseFloat(body.goldGrams) || newAmount
 
-      await updateGoldWeight(body.toStorageTypeId, grams, true)
-    } else if (body.type === 'income' && body.toStorageTypeId) {
-      await updateStorageBalance(body.toStorageTypeId, newAmount, true)
-    } else if (body.type === 'expense' && body.fromStorageTypeId) {
-      await updateStorageBalance(body.fromStorageTypeId, newAmount, false)
-    } else if (body.type === 'savings' && body.fromStorageTypeId) {
-      await updateStorageBalance(body.fromStorageTypeId, newAmount, false)
-    } else if (body.type === 'transfer') {
-      if (body.fromStorageTypeId) await updateStorageBalance(body.fromStorageTypeId, newAmount, false)
-      if (body.toStorageTypeId) await updateStorageBalance(body.toStorageTypeId, newAmount, true)
-    }
-
-    const transaction = await prisma.transaction.update({
-      where: { id: body.id },
-      data: {
-        type: body.type,
-        amount: newAmount,
-        description: body.description || null,
-        date: body.date ? wibDateAtNoon(body.date) : undefined,
-        familyMemberId: body.familyMemberId && body.familyMemberId !== '' ? body.familyMemberId : null,
-        savingsCategoryId: body.savingsCategoryId && body.savingsCategoryId !== '' ? body.savingsCategoryId : null,
-        expenseCategoryId: body.expenseCategoryId && body.expenseCategoryId !== '' ? body.expenseCategoryId : null,
-        fromStorageTypeId: body.fromStorageTypeId && body.fromStorageTypeId !== '' ? body.fromStorageTypeId : null,
-        toStorageTypeId: body.toStorageTypeId && body.toStorageTypeId !== '' ? body.toStorageTypeId : null
-      },
-      include: {
-        familyMember: true,
-        savingsCategory: true,
-        expenseCategory: true,
-        fromStorageType: true,
-        toStorageType: true
+        await updateGoldWeight(prisma, body.toStorageTypeId, grams, true)
+      } else if (body.type === 'income' && body.toStorageTypeId) {
+        await updateStorageBalance(prisma, body.toStorageTypeId, newAmount, true)
+      } else if (body.type === 'expense' && body.fromStorageTypeId) {
+        await updateStorageBalance(prisma, body.fromStorageTypeId, newAmount, false)
+      } else if (body.type === 'savings' && body.fromStorageTypeId) {
+        await updateStorageBalance(prisma, body.fromStorageTypeId, newAmount, false)
+      } else if (body.type === 'transfer') {
+        if (body.fromStorageTypeId) await updateStorageBalance(prisma, body.fromStorageTypeId, newAmount, false)
+        if (body.toStorageTypeId) await updateStorageBalance(prisma, body.toStorageTypeId, newAmount, true)
       }
+
+      return prisma.transaction.update({
+        where: { id: body.id },
+        data: {
+          type: body.type,
+          amount: newAmount,
+          description: body.description || null,
+          date: body.date ? wibDateAtNoon(body.date) : undefined,
+          familyMemberId: body.familyMemberId && body.familyMemberId !== '' ? body.familyMemberId : null,
+          savingsCategoryId: body.savingsCategoryId && body.savingsCategoryId !== '' ? body.savingsCategoryId : null,
+          expenseCategoryId: body.expenseCategoryId && body.expenseCategoryId !== '' ? body.expenseCategoryId : null,
+          fromStorageTypeId: body.fromStorageTypeId && body.fromStorageTypeId !== '' ? body.fromStorageTypeId : null,
+          toStorageTypeId: body.toStorageTypeId && body.toStorageTypeId !== '' ? body.toStorageTypeId : null
+        },
+        include: {
+          familyMember: true,
+          savingsCategory: true,
+          expenseCategory: true,
+          fromStorageType: true,
+          toStorageType: true
+        }
+      })
     })
 
     emitTabungan(TABUNGAN_EVENTS.TRANSACTIONS_CHANGED)
-    
-return NextResponse.json(transaction)
+
+    return NextResponse.json(transaction)
   } catch (error) {
     console.error('Failed to update transaction:', error)
-    
-return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 })
+
+    return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 })
   }
 }
 
@@ -253,32 +260,35 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
-    // Get transaction to reverse its effect
-    const tx = await prisma.transaction.findUnique({ where: { id } })
+    await withPrisma(async prisma => {
+      // Get transaction to reverse its effect
+      const tx = await prisma.transaction.findUnique({ where: { id } })
 
-    if (tx) {
-      // Reverse transaction effect before deleting
-      if (tx.type === 'gold_income' && tx.toStorageTypeId) {
-        await updateGoldWeight(tx.toStorageTypeId, tx.amount, false)
-      } else if (tx.type === 'income' && tx.toStorageTypeId) {
-        await updateStorageBalance(tx.toStorageTypeId, tx.amount, false)
-      } else if (tx.type === 'expense' && tx.fromStorageTypeId) {
-        await updateStorageBalance(tx.fromStorageTypeId, tx.amount, true)
-      } else if (tx.type === 'savings' && tx.fromStorageTypeId) {
-        await updateStorageBalance(tx.fromStorageTypeId, tx.amount, true)
-      } else if (tx.type === 'transfer') {
-        if (tx.fromStorageTypeId) await updateStorageBalance(tx.fromStorageTypeId, tx.amount, true)
-        if (tx.toStorageTypeId) await updateStorageBalance(tx.toStorageTypeId, tx.amount, false)
+      if (tx) {
+        // Reverse transaction effect before deleting
+        if (tx.type === 'gold_income' && tx.toStorageTypeId) {
+          await updateGoldWeight(prisma, tx.toStorageTypeId, tx.amount, false)
+        } else if (tx.type === 'income' && tx.toStorageTypeId) {
+          await updateStorageBalance(prisma, tx.toStorageTypeId, tx.amount, false)
+        } else if (tx.type === 'expense' && tx.fromStorageTypeId) {
+          await updateStorageBalance(prisma, tx.fromStorageTypeId, tx.amount, true)
+        } else if (tx.type === 'savings' && tx.fromStorageTypeId) {
+          await updateStorageBalance(prisma, tx.fromStorageTypeId, tx.amount, true)
+        } else if (tx.type === 'transfer') {
+          if (tx.fromStorageTypeId) await updateStorageBalance(prisma, tx.fromStorageTypeId, tx.amount, true)
+          if (tx.toStorageTypeId) await updateStorageBalance(prisma, tx.toStorageTypeId, tx.amount, false)
+        }
       }
-    }
 
-    await prisma.transaction.delete({ where: { id } })
+      await prisma.transaction.delete({ where: { id } })
+    })
+
     emitTabungan(TABUNGAN_EVENTS.TRANSACTIONS_CHANGED)
-    
-return NextResponse.json({ message: 'Transaction deleted successfully' })
+
+    return NextResponse.json({ message: 'Transaction deleted successfully' })
   } catch (error) {
     console.error('Failed to delete transaction:', error)
-    
-return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 })
+
+    return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 })
   }
 }
