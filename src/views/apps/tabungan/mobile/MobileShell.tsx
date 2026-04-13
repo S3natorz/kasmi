@@ -13,10 +13,22 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import BottomNav from './BottomNav'
 import AddTransactionDialog from '@/components/dialogs/AddTransactionDialog'
 
+// Hooks
+import { invalidateTabuganKeys } from '@/hooks/useTabunganData'
+
 type Props = {
   children: ReactNode
   onTransactionAdded?: () => void
 }
+
+// Keys that need to refetch after a transaction is added from the
+// global BottomNav "+" button. Prefix-matched by invalidateTabuganKeys,
+// so stats URLs with query strings are included.
+const TRANSACTION_INVALIDATION_KEYS = [
+  '/api/apps/tabungan/transactions',
+  '/api/apps/tabungan/stats',
+  '/api/apps/tabungan/storage-types'
+]
 
 // Note: the CSS that hides the outer VerticalLayout chrome is rendered
 // from the server component at `app/[lang]/(dashboard)/(private)/apps/
@@ -62,6 +74,12 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
         onClose={() => setAddDialogOpen(false)}
         onSuccess={() => {
           setAddDialogOpen(false)
+
+          // Always bust the local SWR cache so the balance hero and
+          // transaction list refresh immediately — don't rely solely
+          // on the realtime WebSocket (which may be unset, lazy, or
+          // in a reconnect backoff window).
+          invalidateTabuganKeys(TRANSACTION_INVALIDATION_KEYS)
           onTransactionAdded?.()
         }}
       />
