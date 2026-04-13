@@ -12,7 +12,8 @@ const hideOuterChromeCss = `
   .ts-vertical-layout-navbar,
   .ts-vertical-nav-root,
   .ts-vertical-layout-footer,
-  .customizer {
+  .customizer,
+  .app-scroll-to-top {
     display: none !important;
   }
   .ts-vertical-layout-content-wrapper,

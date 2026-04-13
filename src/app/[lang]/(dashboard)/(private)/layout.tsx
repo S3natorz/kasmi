@@ -62,7 +62,7 @@ const Layout = async (props: ChildrenType & { params: Promise<{ lang: string }> 
             </HorizontalLayout>
           }
         />
-        <ScrollToTop className='mui-fixed'>
+        <ScrollToTop className='mui-fixed app-scroll-to-top'>
           <Button
             variant='contained'
             className='is-10 bs-10 rounded-full p-0 min-is-0 flex items-center justify-center'
