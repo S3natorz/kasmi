@@ -2,6 +2,7 @@
 
 // React Imports
 import type { ReactNode } from 'react'
+import { useMemo } from 'react'
 
 // Next Imports
 import { usePathname, useRouter, useParams } from 'next/navigation'
@@ -14,25 +15,53 @@ import MobileShell from './MobileShell'
 import TopBar from './TopBar'
 import TabunganRealtime from '@/libs/realtime/TabunganRealtime'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 type Props = {
   children: ReactNode
-}
-
-const pageMeta: Record<string, { title: string; subtitle?: string }> = {
-  '/apps/tabungan/transactions': { title: 'Semua Transaksi', subtitle: 'Riwayat keuangan' },
-  '/apps/tabungan/storage-types': { title: 'Dompet & Simpanan', subtitle: 'Kelola akun & saldo' },
-  '/apps/tabungan/family-members': { title: 'Anggota Keluarga', subtitle: 'Kelola anggota' },
-  '/apps/tabungan/categories/savings': { title: 'Kategori Tabungan', subtitle: 'Target & kategori' },
-  '/apps/tabungan/categories/expenses': { title: 'Kategori Pengeluaran', subtitle: 'Kelompokkan pengeluaran' },
-  '/apps/tabungan/backup': { title: 'Backup & Restore', subtitle: 'Cadangan data' },
-  '/apps/tabungan/settings': { title: 'Pengaturan', subtitle: 'Menu & konfigurasi lainnya' }
 }
 
 const TabunganMobileLayout = ({ children }: Props) => {
   const pathname = usePathname() || ''
   const router = useRouter()
   const params = useParams()
+  const dict = useTabunganDictionary()
   const lang = (params?.lang as string) || 'en'
+
+  const pageMeta = useMemo<Record<string, { title: string; subtitle?: string }>>(
+    () => ({
+      '/apps/tabungan/transactions': {
+        title: dict.topbar.transactions.title,
+        subtitle: dict.topbar.transactions.subtitle
+      },
+      '/apps/tabungan/storage-types': {
+        title: dict.topbar.storageTypes.title,
+        subtitle: dict.topbar.storageTypes.subtitle
+      },
+      '/apps/tabungan/family-members': {
+        title: dict.topbar.familyMembers.title,
+        subtitle: dict.topbar.familyMembers.subtitle
+      },
+      '/apps/tabungan/categories/savings': {
+        title: dict.topbar.savingsCategories.title,
+        subtitle: dict.topbar.savingsCategories.subtitle
+      },
+      '/apps/tabungan/categories/expenses': {
+        title: dict.topbar.expenseCategories.title,
+        subtitle: dict.topbar.expenseCategories.subtitle
+      },
+      '/apps/tabungan/backup': {
+        title: dict.topbar.backup.title,
+        subtitle: dict.topbar.backup.subtitle
+      },
+      '/apps/tabungan/settings': {
+        title: dict.topbar.settings.title,
+        subtitle: dict.topbar.settings.subtitle
+      }
+    }),
+    [dict]
+  )
 
   // Strip /{lang} prefix to match meta keys
   const normalizedPath = pathname.replace(new RegExp(`^/${lang}`), '')

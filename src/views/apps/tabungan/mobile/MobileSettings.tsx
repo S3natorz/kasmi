@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 // Next Imports
 import { useRouter, useParams, usePathname } from 'next/navigation'
@@ -25,42 +25,45 @@ import type { Locale } from '@configs/i18n'
 
 // Hook Imports
 import { useSettings } from '@core/hooks/useSettings'
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
 
-type MenuGroup = {
-  title: string
-  items: {
-    label: string
-    description?: string
-    icon: string
-    path: string
-    color: string
-    bg: string
-  }[]
+type MenuItemSpec = {
+  labelKey: 'familyMembers' | 'savingsCategories' | 'expenseCategories' | 'backup'
+  descKey: 'familyMembersDesc' | 'savingsCategoriesDesc' | 'expenseCategoriesDesc' | 'backupDesc'
+  icon: string
+  path: string
+  color: string
+  bg: string
 }
 
-const groups: MenuGroup[] = [
+type MenuGroupSpec = {
+  titleKey: 'mainData' | 'system'
+  items: MenuItemSpec[]
+}
+
+const groupSpecs: MenuGroupSpec[] = [
   {
-    title: 'Data Utama',
+    titleKey: 'mainData',
     items: [
       {
-        label: 'Anggota Keluarga',
-        description: 'Kelola anggota & profil keluarga',
+        labelKey: 'familyMembers',
+        descKey: 'familyMembersDesc',
         icon: 'tabler-users',
         path: '/apps/tabungan/family-members',
         color: '#7367F0',
         bg: 'rgba(115, 103, 240, 0.12)'
       },
       {
-        label: 'Kategori Tabungan',
-        description: 'Target & kategori tabungan',
+        labelKey: 'savingsCategories',
+        descKey: 'savingsCategoriesDesc',
         icon: 'tabler-coin',
         path: '/apps/tabungan/categories/savings',
         color: '#28C76F',
         bg: 'rgba(40, 199, 111, 0.12)'
       },
       {
-        label: 'Kategori Pengeluaran',
-        description: 'Kelompokkan pengeluaran harian',
+        labelKey: 'expenseCategories',
+        descKey: 'expenseCategoriesDesc',
         icon: 'tabler-shopping-cart',
         path: '/apps/tabungan/categories/expenses',
         color: '#FF9F43',
@@ -69,11 +72,11 @@ const groups: MenuGroup[] = [
     ]
   },
   {
-    title: 'Sistem',
+    titleKey: 'system',
     items: [
       {
-        label: 'Backup & Restore',
-        description: 'Cadangkan & pulihkan data',
+        labelKey: 'backup',
+        descKey: 'backupDesc',
         icon: 'tabler-database',
         path: '/apps/tabungan/backup',
         color: '#00CFE8',
@@ -83,15 +86,9 @@ const groups: MenuGroup[] = [
   }
 ]
 
-const modeOptions: { value: Mode; label: string; icon: string }[] = [
-  { value: 'light', label: 'Terang', icon: 'tabler-sun' },
-  { value: 'dark', label: 'Gelap', icon: 'tabler-moon-stars' },
-  { value: 'system', label: 'Sistem', icon: 'tabler-device-laptop' }
-]
-
 const languageOptions: { value: Locale; label: string; short: string }[] = [
+  { value: 'id', label: 'Indonesia', short: 'ID' },
   { value: 'en', label: 'English', short: 'EN' },
-  { value: 'fr', label: 'Français', short: 'FR' },
   { value: 'ar', label: 'العربية', short: 'AR' }
 ]
 
@@ -101,14 +98,24 @@ const MobileSettings = () => {
   const router = useRouter()
   const pathname = usePathname() || '/'
   const params = useParams()
-  const lang = (params?.lang as Locale) || 'en'
+  const lang = (params?.lang as Locale) || 'id'
+  const dict = useTabunganDictionary()
 
   const { settings, updateSettings } = useSettings()
   const currentMode: Mode = settings.mode || 'system'
 
+  const modeOptions = useMemo<{ value: Mode; label: string; icon: string }[]>(
+    () => [
+      { value: 'light', label: dict.settings.modeLight, icon: 'tabler-sun' },
+      { value: 'dark', label: dict.settings.modeDark, icon: 'tabler-moon-stars' },
+      { value: 'system', label: dict.settings.modeSystem, icon: 'tabler-device-laptop' }
+    ],
+    [dict]
+  )
+
   // Prefetch all destinations so tap-through feels instant
   useEffect(() => {
-    groups.forEach(g => g.items.forEach(item => router.prefetch(`/${lang}${item.path}`)))
+    groupSpecs.forEach(g => g.items.forEach(item => router.prefetch(`/${lang}${item.path}`)))
   }, [lang, router])
 
   const handleModeChange = (_: React.MouseEvent<HTMLElement>, mode: Mode | null) => {
@@ -146,9 +153,9 @@ const MobileSettings = () => {
 
   return (
     <Box sx={{ px: 0.5, pb: 2 }}>
-      {/* Tampilan */}
+      {/* Appearance */}
       <Box sx={{ mb: 2 }}>
-        {sectionLabel('Tampilan')}
+        {sectionLabel(dict.settings.appearance)}
         <Paper
           elevation={0}
           sx={{
@@ -174,9 +181,9 @@ const MobileSettings = () => {
               <i className='tabler-palette' style={{ fontSize: 22, color: '#7367F0' }} />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Mode Tema</Typography>
+              <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>{dict.settings.themeMode}</Typography>
               <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                Pilih tampilan terang, gelap, atau sistem
+                {dict.settings.themeModeDesc}
               </Typography>
             </Box>
           </Box>
@@ -219,9 +226,9 @@ const MobileSettings = () => {
         </Paper>
       </Box>
 
-      {/* Bahasa */}
+      {/* Language */}
       <Box sx={{ mb: 2 }}>
-        {sectionLabel('Bahasa')}
+        {sectionLabel(dict.settings.language)}
         <Paper
           elevation={0}
           sx={{
@@ -247,9 +254,9 @@ const MobileSettings = () => {
               <i className='tabler-language' style={{ fontSize: 22, color: '#00CFE8' }} />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Bahasa Aplikasi</Typography>
+              <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>{dict.settings.appLanguage}</Typography>
               <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                Ubah bahasa tampilan (dictionary)
+                {dict.settings.appLanguageDesc}
               </Typography>
             </Box>
           </Box>
@@ -295,9 +302,9 @@ const MobileSettings = () => {
         </Paper>
       </Box>
 
-      {groups.map(group => (
-        <Box key={group.title} sx={{ mb: 2 }}>
-          {sectionLabel(group.title)}
+      {groupSpecs.map(group => (
+        <Box key={group.titleKey} sx={{ mb: 2 }}>
+          {sectionLabel(dict.settings[group.titleKey])}
           <Paper
             elevation={0}
             sx={{
@@ -315,10 +322,7 @@ const MobileSettings = () => {
                   divider={idx < group.items.length - 1}
                   sx={{ borderColor: sectionBorder }}
                 >
-                  <ListItemButton
-                    onClick={() => router.push(`/${lang}${item.path}`)}
-                    sx={{ py: 1.5, px: 2 }}
-                  >
+                  <ListItemButton onClick={() => router.push(`/${lang}${item.path}`)} sx={{ py: 1.5, px: 2 }}>
                     <ListItemIcon sx={{ minWidth: 48 }}>
                       <Box
                         sx={{
@@ -335,8 +339,8 @@ const MobileSettings = () => {
                       </Box>
                     </ListItemIcon>
                     <ListItemText
-                      primary={item.label}
-                      secondary={item.description}
+                      primary={dict.settings[item.labelKey]}
+                      secondary={dict.settings[item.descKey]}
                       primaryTypographyProps={{ fontWeight: 600, fontSize: '0.95rem' }}
                       secondaryTypographyProps={{ fontSize: '0.75rem' }}
                     />
@@ -359,7 +363,7 @@ const MobileSettings = () => {
           fontSize: '0.7rem'
         }}
       >
-        Kasmi Mobile · Family Savings
+        {dict.tagline}
       </Typography>
     </Box>
   )

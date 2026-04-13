@@ -14,9 +14,20 @@ import { useTheme } from '@mui/material/styles'
 
 import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
 
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 const MobileBackup = () => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const dict = useTabunganDictionary()
+
+  const labels: Record<string, string> = {
+    familyMembers: dict.backup.items.familyMembers,
+    storageTypes: dict.backup.items.storageTypes,
+    savingsCategories: dict.backup.items.savingsCategories,
+    expenseCategories: dict.backup.items.expenseCategories,
+    transactions: dict.backup.items.transactions
+  }
 
   const [loading, setLoading] = useState<'backup' | 'restore' | null>(null)
   const [restoreResult, setRestoreResult] = useState<{
@@ -42,10 +53,10 @@ const MobileBackup = () => {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      showSuccessToast('Backup berhasil didownload!')
+      showSuccessToast(dict.backup.downloadSuccess)
     } catch (error) {
       console.error('Backup failed:', error)
-      showErrorToast('Gagal membuat backup')
+      showErrorToast(dict.backup.downloadFail)
     } finally {
       setLoading(null)
     }
@@ -57,14 +68,12 @@ const MobileBackup = () => {
       const data = JSON.parse(text)
 
       if (!data.version || !data.data) {
-        showErrorToast('Format file backup tidak valid')
+        showErrorToast(dict.backup.invalidFormat)
 
         return
       }
 
-      const confirmed = await showDeleteConfirm(
-        'semua data saat ini. Data lama akan diganti dengan data dari backup'
-      )
+      const confirmed = await showDeleteConfirm(dict.backup.restoreConfirmTarget)
 
       if (!confirmed) return
 
@@ -82,22 +91,14 @@ const MobileBackup = () => {
       if (!res.ok) throw new Error(result.error || 'Restore gagal')
 
       setRestoreResult(result)
-      showSuccessToast('Data berhasil di-restore!')
+      showSuccessToast(dict.backup.restoreSuccess)
     } catch (error) {
       console.error('Restore failed:', error)
-      showErrorToast('Gagal restore data. Pastikan file backup valid.')
+      showErrorToast(dict.backup.restoreFail)
     } finally {
       setLoading(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
-  }
-
-  const labels: Record<string, string> = {
-    familyMembers: 'Anggota Keluarga',
-    storageTypes: 'Jenis Simpanan',
-    savingsCategories: 'Kategori Tabungan',
-    expenseCategories: 'Kategori Pengeluaran',
-    transactions: 'Transaksi'
   }
 
   return (
@@ -119,10 +120,10 @@ const MobileBackup = () => {
           <i className='tabler-database-export' style={{ fontSize: '2.25rem' }} />
         </Box>
         <Typography variant='h5' sx={{ fontWeight: 700, textAlign: 'center' }}>
-          Backup & Restore
+          {dict.backup.title}
         </Typography>
         <Typography variant='body2' color='text.secondary' sx={{ textAlign: 'center' }}>
-          Download backup database atau restore dari file backup
+          {dict.backup.subtitle}
         </Typography>
       </Box>
 
@@ -153,16 +154,15 @@ const MobileBackup = () => {
               <i className='tabler-download' style={{ fontSize: '2rem' }} />
             </Box>
             <Typography variant='h6' sx={{ fontWeight: 700, textAlign: 'center' }}>
-              Download Backup
+              {dict.backup.downloadCardTitle}
             </Typography>
             <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center', lineHeight: 1.5 }}>
-              Export semua data ke file JSON. File berisi anggota keluarga, jenis simpanan, kategori, dan transaksi.
-              Simpan file ini di tempat yang aman.
+              {dict.backup.downloadCardDesc}
             </Typography>
           </Box>
 
           <Alert severity='info' variant='outlined' sx={{ fontSize: '0.78rem', borderRadius: '12px' }}>
-            Disarankan backup secara berkala untuk mencegah kehilangan data
+            {dict.backup.downloadInfo}
           </Alert>
 
           <Button
@@ -181,7 +181,7 @@ const MobileBackup = () => {
             onClick={handleBackup}
             disabled={loading !== null}
           >
-            {loading === 'backup' ? 'Mengunduh...' : 'Download Backup'}
+            {loading === 'backup' ? dict.backup.downloadingBtn : dict.backup.downloadBtn}
           </Button>
         </CardContent>
       </Card>
@@ -213,16 +213,15 @@ const MobileBackup = () => {
               <i className='tabler-upload' style={{ fontSize: '2rem' }} />
             </Box>
             <Typography variant='h6' sx={{ fontWeight: 700, textAlign: 'center' }}>
-              Restore Data
+              {dict.backup.restoreCardTitle}
             </Typography>
             <Typography variant='caption' color='text.secondary' sx={{ textAlign: 'center', lineHeight: 1.5 }}>
-              Upload file backup untuk mengembalikan data. Semua data saat ini akan diganti dengan data dari file
-              backup.
+              {dict.backup.restoreCardDesc}
             </Typography>
           </Box>
 
           <Alert severity='warning' variant='outlined' sx={{ fontSize: '0.78rem', borderRadius: '12px' }}>
-            Restore akan menghapus semua data saat ini dan menggantinya dengan data dari backup
+            {dict.backup.restoreWarn}
           </Alert>
 
           <input
@@ -253,7 +252,7 @@ const MobileBackup = () => {
             onClick={() => fileInputRef.current?.click()}
             disabled={loading !== null}
           >
-            {loading === 'restore' ? 'Memulihkan...' : 'Pilih File & Restore'}
+            {loading === 'restore' ? dict.backup.restoringBtn : dict.backup.restoreBtn}
           </Button>
         </CardContent>
       </Card>
@@ -273,7 +272,7 @@ const MobileBackup = () => {
               {restoreResult.message}
             </Alert>
             <Typography variant='subtitle2' sx={{ fontWeight: 700 }}>
-              Data yang di-restore:
+              {dict.backup.restoreResultTitle}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {Object.entries(restoreResult.counts).map(([key, count]) => (

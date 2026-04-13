@@ -21,6 +21,9 @@ import { TransactionRowSkeleton } from './MobileSkeletons'
 // Hooks
 import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
 
+// Contexts
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 // Utils
 import { formatWibDateKey, isWibToday, isWibYesterday, wibDateKey } from '@/libs/wib'
 
@@ -29,13 +32,13 @@ import type { TransactionType } from '@/types/apps/tabunganTypes'
 
 type FilterType = 'all' | 'income' | 'expense' | 'savings' | 'transfer'
 
-const filters: { key: FilterType; label: string; icon: string }[] = [
-  { key: 'all', label: 'Semua', icon: 'tabler-list' },
-  { key: 'income', label: 'Masuk', icon: 'tabler-arrow-down-left' },
-  { key: 'expense', label: 'Keluar', icon: 'tabler-arrow-up-right' },
-  { key: 'savings', label: 'Tabungan', icon: 'tabler-coin' },
-  { key: 'transfer', label: 'Transfer', icon: 'tabler-transfer' }
-]
+const filterIcons: Record<FilterType, string> = {
+  all: 'tabler-list',
+  income: 'tabler-arrow-down-left',
+  expense: 'tabler-arrow-up-right',
+  savings: 'tabler-coin',
+  transfer: 'tabler-transfer'
+}
 
 const typeConfig: Record<string, { icon: string; color: string; bg: string; sign: string }> = {
   income: { icon: 'tabler-arrow-down-left', color: '#28C76F', bg: 'rgba(40, 199, 111, 0.12)', sign: '+' },
@@ -66,16 +69,25 @@ const groupByDate = (txs: TransactionType[]) => {
   return groups
 }
 
-const formatGroupHeader = (key: string) => {
-  if (isWibToday(key)) return 'Hari Ini'
-  if (isWibYesterday(key)) return 'Kemarin'
-
-  return formatWibDateKey(key, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-}
-
 const MobileTransactions = () => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const dict = useTabunganDictionary()
+
+  const filters: { key: FilterType; label: string; icon: string }[] = [
+    { key: 'all', label: dict.filters.all, icon: filterIcons.all },
+    { key: 'income', label: dict.filters.income, icon: filterIcons.income },
+    { key: 'expense', label: dict.filters.expense, icon: filterIcons.expense },
+    { key: 'savings', label: dict.filters.savings, icon: filterIcons.savings },
+    { key: 'transfer', label: dict.filters.transfer, icon: filterIcons.transfer }
+  ]
+
+  const formatGroupHeader = (key: string) => {
+    if (isWibToday(key)) return dict.dates.today
+    if (isWibYesterday(key)) return dict.dates.yesterday
+
+    return formatWibDateKey(key, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  }
 
   const { data: txData, isLoading, mutate } = useTabunganData<TransactionType[]>('/api/apps/tabungan/transactions')
 
@@ -158,7 +170,7 @@ const MobileTransactions = () => {
         >
           <i className='tabler-search' style={{ fontSize: 18, color: isDark ? '#aaa' : '#666' }} />
           <InputBase
-            placeholder='Cari transaksi...'
+            placeholder={dict.transactionsList.searchPlaceholder}
             value={search}
             onChange={e => setSearch(e.target.value)}
             sx={{ flex: 1, fontSize: '0.9rem' }}
@@ -181,11 +193,11 @@ const MobileTransactions = () => {
           }}
         >
           <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-            {filtered.length} transaksi
+            {filtered.length} {dict.transactionsList.count}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <Typography variant='caption' sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
-              Net:
+              {dict.transactionsList.net}
             </Typography>
             <Typography
               variant='caption'
@@ -266,9 +278,9 @@ const MobileTransactions = () => {
       ) : filtered.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
           <i className='tabler-inbox' style={{ fontSize: 64, opacity: 0.3 }} />
-          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>Tidak ada transaksi</Typography>
+          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>{dict.transactionsList.empty}</Typography>
           <Typography variant='caption' sx={{ fontSize: '0.75rem', opacity: 0.7 }}>
-            Tap tombol + untuk menambah
+            {dict.transactionsList.emptyHint}
           </Typography>
         </Box>
       ) : (

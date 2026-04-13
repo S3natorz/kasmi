@@ -6,6 +6,9 @@ import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
 import { useTheme } from '@mui/material/styles'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 // Type Imports
 import type { StorageTypeType } from '@/types/apps/tabunganTypes'
 
@@ -49,6 +52,7 @@ type Props = {
 
 const StorageCarousel = ({ storages, goldPrice, hideBalance, onStorageClick }: Props) => {
   const theme = useTheme()
+  const dict = useTabunganDictionary()
   const isDark = theme.palette.mode === 'dark'
   const gradients = isDark ? darkGradients : lightGradients
   const maskValue = (value: string) => (hideBalance ? '••••••' : value)
@@ -59,7 +63,7 @@ const StorageCarousel = ({ storages, goldPrice, hideBalance, onStorageClick }: P
     <Box sx={{ pt: 3 }}>
       <Box sx={{ px: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
         <Typography variant='subtitle2' sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
-          Dompet & Simpanan
+          {dict.storageCarousel.title}
         </Typography>
         <Typography variant='caption' sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
           {storages.length} akun

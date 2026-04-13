@@ -5,6 +5,9 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import LinearProgress from '@mui/material/LinearProgress'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -27,6 +30,7 @@ type Props = {
 }
 
 const SavingsGoals = ({ savings, hideBalance }: Props) => {
+  const dict = useTabunganDictionary()
   const maskValue = (value: string) => (hideBalance ? '••••••' : value)
 
   if (savings.length === 0) return null
@@ -35,10 +39,10 @@ const SavingsGoals = ({ savings, hideBalance }: Props) => {
     <Box sx={{ px: 2, pt: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
         <Typography variant='subtitle2' sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
-          Target Tabungan
+          {dict.savingsGoals.title}
         </Typography>
         <Typography variant='caption' sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-          {savings.length} target
+          {savings.length} {dict.savingsGoals.target.toLowerCase()}
         </Typography>
       </Box>
 

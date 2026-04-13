@@ -101,5 +101,292 @@
     "menuLevel2": "Menu Level 2",
     "menuLevel3": "Menu Level 3",
     "disabledMenu": "Disabled Menu"
+  },
+  "tabungan": {
+    "appName": "Kasmi",
+    "tagline": "Kasmi Mobile · Family Savings",
+    "common": {
+      "all": "All",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "update": "Update",
+      "close": "Close",
+      "edit": "Edit",
+      "add": "Add",
+      "search": "Search",
+      "loading": "Loading...",
+      "empty": "No data yet",
+      "confirm": "Confirm",
+      "yes": "Yes",
+      "no": "No",
+      "retry": "Retry",
+      "error": "Something went wrong"
+    },
+    "nav": {
+      "home": "Home",
+      "transactions": "Transactions",
+      "add": "Add",
+      "storage": "Wallet",
+      "menu": "Menu"
+    },
+    "topbar": {
+      "transactions": { "title": "All Transactions", "subtitle": "Financial history" },
+      "storageTypes": { "title": "Wallets & Savings", "subtitle": "Manage accounts & balance" },
+      "familyMembers": { "title": "Family Members", "subtitle": "Manage members" },
+      "savingsCategories": { "title": "Savings Categories", "subtitle": "Goals & categories" },
+      "expenseCategories": { "title": "Expense Categories", "subtitle": "Group your expenses" },
+      "backup": { "title": "Backup & Restore", "subtitle": "Data backups" },
+      "settings": { "title": "Settings", "subtitle": "More menu & configuration" }
+    },
+    "home": {
+      "title": "Kasmi",
+      "pickMonth": "Pick Month",
+      "periodLabels": {
+        "daily": "Today",
+        "weekly": "This Week",
+        "monthly": "This Period"
+      }
+    },
+    "filters": {
+      "all": "All",
+      "income": "In",
+      "expense": "Out",
+      "savings": "Savings",
+      "transfer": "Transfer"
+    },
+    "types": {
+      "income": "Income",
+      "incomeGold": "Gold Income",
+      "expense": "Expense",
+      "savings": "Savings",
+      "transfer": "Transfer"
+    },
+    "dates": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "stats": {
+      "title": "Period Summary",
+      "income": "Income",
+      "expense": "Expense",
+      "savings": "Savings",
+      "transactions": "Transactions"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "income": "Income",
+      "expense": "Expense",
+      "savings": "Savings",
+      "transfer": "Transfer"
+    },
+    "recentActivity": {
+      "title": "Recent Transactions",
+      "seeAll": "See All",
+      "empty": "No transactions"
+    },
+    "storageCarousel": {
+      "title": "Wallets & Savings",
+      "seeAll": "See All",
+      "empty": "No wallets yet",
+      "gold": "Gold",
+      "grams": "grams",
+      "balance": "Balance"
+    },
+    "savingsGoals": {
+      "title": "Savings Goals",
+      "seeAll": "See All",
+      "empty": "No goals yet",
+      "target": "Target",
+      "saved": "Saved",
+      "of": "of"
+    },
+    "balanceHero": {
+      "totalBalance": "Total Balance",
+      "income": "Income",
+      "expense": "Expense"
+    },
+    "transactionsList": {
+      "searchPlaceholder": "Search transactions...",
+      "count": "transactions",
+      "net": "Net:",
+      "empty": "No transactions",
+      "emptyHint": "Tap the + button to add one"
+    },
+    "settings": {
+      "mainData": "Main Data",
+      "system": "System",
+      "appearance": "Appearance",
+      "language": "Language",
+      "themeMode": "Theme Mode",
+      "themeModeDesc": "Choose light, dark, or system appearance",
+      "appLanguage": "App Language",
+      "appLanguageDesc": "Change the app's display language",
+      "modeLight": "Light",
+      "modeDark": "Dark",
+      "modeSystem": "System",
+      "familyMembers": "Family Members",
+      "familyMembersDesc": "Manage family members & profiles",
+      "savingsCategories": "Savings Categories",
+      "savingsCategoriesDesc": "Savings goals & categories",
+      "expenseCategories": "Expense Categories",
+      "expenseCategoriesDesc": "Group your daily expenses",
+      "backup": "Backup & Restore",
+      "backupDesc": "Back up & restore your data"
+    },
+    "familyMembers": {
+      "title": "Family Members",
+      "add": "Add Member",
+      "edit": "Edit Member",
+      "empty": "No family members yet",
+      "name": "Name",
+      "role": "Role",
+      "color": "Color",
+      "addSuccess": "Member added successfully",
+      "addFail": "Failed to add member",
+      "updateSuccess": "Member updated successfully",
+      "updateFail": "Failed to update member",
+      "deleteSuccess": "Member deleted successfully",
+      "deleteFail": "Failed to delete member",
+      "deleteConfirm": "this family member"
+    },
+    "storageTypes": {
+      "title": "Wallets & Savings",
+      "add": "Add Wallet",
+      "edit": "Edit Wallet",
+      "empty": "No wallets yet",
+      "name": "Wallet Name",
+      "balance": "Initial Balance",
+      "isGold": "Gold Wallet",
+      "goldWeight": "Gold Weight (grams)",
+      "color": "Color",
+      "icon": "Icon",
+      "addSuccess": "Wallet added successfully",
+      "addFail": "Failed to add wallet",
+      "updateSuccess": "Wallet updated successfully",
+      "updateFail": "Failed to update wallet",
+      "deleteSuccess": "Wallet deleted successfully",
+      "deleteFail": "Failed to delete wallet",
+      "deleteConfirm": "this wallet"
+    },
+    "savingsCategoriesPage": {
+      "title": "Savings Categories",
+      "add": "Add Category",
+      "edit": "Edit Category",
+      "empty": "No savings categories yet",
+      "name": "Category Name",
+      "target": "Target",
+      "color": "Color",
+      "icon": "Icon",
+      "addSuccess": "Category added successfully",
+      "addFail": "Failed to add category",
+      "updateSuccess": "Category updated successfully",
+      "updateFail": "Failed to update category",
+      "deleteSuccess": "Category deleted successfully",
+      "deleteFail": "Failed to delete category",
+      "deleteConfirm": "this savings category"
+    },
+    "expenseCategoriesPage": {
+      "title": "Expense Categories",
+      "add": "Add Category",
+      "edit": "Edit Category",
+      "empty": "No expense categories yet",
+      "name": "Category Name",
+      "budget": "Budget",
+      "color": "Color",
+      "icon": "Icon",
+      "addSuccess": "Category added successfully",
+      "addFail": "Failed to add category",
+      "updateSuccess": "Category updated successfully",
+      "updateFail": "Failed to update category",
+      "deleteSuccess": "Category deleted successfully",
+      "deleteFail": "Failed to delete category",
+      "deleteConfirm": "this expense category"
+    },
+    "backup": {
+      "title": "Backup & Restore",
+      "subtitle": "Download a database backup or restore from a backup file",
+      "downloadCardTitle": "Download Backup",
+      "downloadCardDesc": "Export all your data to a JSON file. The file contains family members, wallet types, categories, and transactions. Keep this file in a safe place.",
+      "downloadInfo": "We recommend backing up regularly to prevent data loss",
+      "downloadBtn": "Download Backup",
+      "downloadingBtn": "Downloading...",
+      "restoreCardTitle": "Restore Data",
+      "restoreCardDesc": "Upload a backup file to restore your data. All current data will be replaced with data from the backup file.",
+      "restoreWarn": "Restoring will delete all current data and replace it with data from the backup",
+      "restoreBtn": "Choose File & Restore",
+      "restoringBtn": "Restoring...",
+      "restoreResultTitle": "Data restored:",
+      "downloadSuccess": "Backup downloaded successfully!",
+      "downloadFail": "Failed to create backup",
+      "invalidFormat": "Invalid backup file format",
+      "restoreConfirmTarget": "all current data. Existing data will be replaced with data from the backup",
+      "restoreSuccess": "Data restored successfully!",
+      "restoreFail": "Failed to restore data. Make sure the backup file is valid.",
+      "items": {
+        "familyMembers": "Family Members",
+        "storageTypes": "Wallet Types",
+        "savingsCategories": "Savings Categories",
+        "expenseCategories": "Expense Categories",
+        "transactions": "Transactions"
+      }
+    },
+    "dialogs": {
+      "addTitle": "Add Transaction",
+      "editTitle": "Edit Transaction",
+      "addSuccess": "Transaction added successfully!",
+      "addFail": "Failed to save transaction",
+      "updateSuccess": "Transaction updated successfully!",
+      "updateFail": "Failed to update transaction",
+      "deleteSuccess": "Transaction deleted successfully!",
+      "deleteFail": "Failed to delete transaction",
+      "deleteConfirmTarget": "this transaction",
+      "error": "Something went wrong",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "update": "Update",
+      "close": "Close",
+      "submit": "Submit",
+      "submitting": "Saving..."
+    },
+    "fields": {
+      "type": "Type",
+      "amount": "Amount",
+      "amountPlaceholder": "0",
+      "grams": "Gold (grams)",
+      "gramsPlaceholder": "0.00",
+      "description": "Description",
+      "descriptionPlaceholder": "e.g. Monthly salary",
+      "date": "Date",
+      "member": "Family Member",
+      "memberPlaceholder": "Select a member",
+      "category": "Category",
+      "savingsCategory": "Savings Category",
+      "expenseCategory": "Expense Category",
+      "categoryPlaceholder": "Select a category",
+      "fromStorage": "From Wallet",
+      "toStorage": "To Wallet",
+      "storage": "Wallet",
+      "storagePlaceholder": "Select a wallet"
+    },
+    "byType": {
+      "allTitle": "All Transactions",
+      "incomeTitle": "Income Details",
+      "expenseTitle": "Expense Details",
+      "savingsTitle": "Savings Details",
+      "transferTitle": "Transfer Details",
+      "goldIncomeTitle": "Gold Income Details",
+      "total": "Total",
+      "count": "transactions",
+      "empty": "No transactions"
+    },
+    "storageDialog": {
+      "title": "Wallet Transactions",
+      "totalIn": "Total In",
+      "totalOut": "Total Out",
+      "net": "Net Balance",
+      "empty": "No transactions yet"
+    }
   }
 }

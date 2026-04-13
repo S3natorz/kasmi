@@ -1,7 +1,15 @@
 // Component Imports
 import TabunganMobileLayout from '@views/apps/tabungan/mobile/TabunganMobileLayout'
+import { TabunganDictionaryProvider } from '@/contexts/TabunganDictionaryContext'
 
 import type { ChildrenType } from '@core/types'
+import type { Locale } from '@configs/i18n'
+
+// Config Imports
+import { i18n } from '@configs/i18n'
+
+// Util Imports
+import { getDictionary } from '@/utils/getDictionary'
 
 // Hide the outer VerticalLayout chrome (sidebar/header/footer/customizer)
 // right in the SSR HTML so there is no flash of the desktop layout before
@@ -25,11 +33,19 @@ const hideOuterChromeCss = `
   main { padding: 0 !important; }
 `
 
-const TabunganLayout = ({ children }: ChildrenType) => {
+type Props = ChildrenType & { params: Promise<{ lang: string }> }
+
+const TabunganLayout = async ({ children, params }: Props) => {
+  const { lang } = await params
+  const locale: Locale = i18n.locales.includes(lang as Locale) ? (lang as Locale) : i18n.defaultLocale
+  const dictionary = await getDictionary(locale)
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: hideOuterChromeCss }} />
-      <TabunganMobileLayout>{children}</TabunganMobileLayout>
+      <TabunganDictionaryProvider value={dictionary.tabungan}>
+        <TabunganMobileLayout>{children}</TabunganMobileLayout>
+      </TabunganDictionaryProvider>
     </>
   )
 }

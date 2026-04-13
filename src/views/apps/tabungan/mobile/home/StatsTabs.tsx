@@ -5,6 +5,9 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 type StatCard = {
   key: string
   label: string
@@ -42,10 +45,12 @@ const StatsTabs = ({
   hideBalance,
   onCardClick
 }: Props) => {
+  const dict = useTabunganDictionary()
+
   const cards: StatCard[] = [
     {
       key: 'income',
-      label: 'Pemasukan',
+      label: dict.stats.income,
       value: totalIncome,
       icon: 'tabler-trending-up',
       color: '#28C76F',
@@ -54,7 +59,7 @@ const StatsTabs = ({
     },
     {
       key: 'expense',
-      label: 'Pengeluaran',
+      label: dict.stats.expense,
       value: totalExpenses,
       icon: 'tabler-trending-down',
       color: '#FF4C51',
@@ -63,7 +68,7 @@ const StatsTabs = ({
     },
     {
       key: 'savings',
-      label: 'Tabungan',
+      label: dict.stats.savings,
       value: totalSavings,
       icon: 'tabler-coin',
       color: '#00BAD1',
@@ -72,7 +77,7 @@ const StatsTabs = ({
     },
     {
       key: 'all',
-      label: 'Transaksi',
+      label: dict.stats.transactions,
       value: transactionCount,
       icon: 'tabler-receipt',
       color: '#FF9F43',
@@ -86,7 +91,7 @@ const StatsTabs = ({
   return (
     <Box sx={{ px: 2, pt: 3 }}>
       <Typography variant='subtitle2' sx={{ fontWeight: 700, fontSize: '0.95rem', mb: 1.5 }}>
-        Ringkasan Periode
+        {dict.stats.title}
       </Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.25 }}>
         {cards.map(card => (

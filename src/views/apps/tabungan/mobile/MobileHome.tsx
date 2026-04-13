@@ -33,6 +33,9 @@ import { MobileHomeSkeleton } from './MobileSkeletons'
 // Hooks
 import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 // Utils
 import {
   formatWibDate,
@@ -99,6 +102,7 @@ const getDateRange = (filterType: FilterType, selectedMonth: string) => {
 const MobileHome = () => {
   const router = useRouter()
   const params = useParams()
+  const dict = useTabunganDictionary()
   const lang = (params?.lang as string) || 'en'
 
   // Period filter
@@ -210,11 +214,11 @@ const MobileHome = () => {
       return formatWibDate(anchor, { month: 'long', year: 'numeric' })
     }
 
-    if (filterType === 'weekly') return 'Minggu Ini'
-    if (filterType === 'daily') return 'Hari Ini'
+    if (filterType === 'weekly') return dict.home.periodLabels.weekly
+    if (filterType === 'daily') return dict.home.periodLabels.daily
 
-    return 'Periode Ini'
-  }, [filterType, selectedMonth])
+    return dict.home.periodLabels.monthly
+  }, [filterType, selectedMonth, dict])
 
   // Handlers
   const handleQuickAction = (type: string) => {
@@ -259,7 +263,7 @@ const MobileHome = () => {
   return (
     <>
       <TopBar
-        title='Kasmi'
+        title={dict.home.title}
         subtitle={periodLabel}
         rightAction={
           <>
@@ -289,7 +293,7 @@ const MobileHome = () => {
           <ListItemIcon>
             <i className='tabler-calendar-today' style={{ fontSize: 18 }} />
           </ListItemIcon>
-          <ListItemText primary='Hari Ini' />
+          <ListItemText primary={dict.home.periodLabels.daily} />
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -301,14 +305,14 @@ const MobileHome = () => {
           <ListItemIcon>
             <i className='tabler-calendar-week' style={{ fontSize: 18 }} />
           </ListItemIcon>
-          <ListItemText primary='Minggu Ini' />
+          <ListItemText primary={dict.home.periodLabels.weekly} />
         </MenuItem>
         <Divider />
         <Typography
           variant='caption'
           sx={{ px: 2, py: 0.5, color: 'text.secondary', fontWeight: 600, display: 'block' }}
         >
-          Pilih Bulan
+          {dict.home.pickMonth}
         </Typography>
         {getMonthOptions().map(opt => (
           <MenuItem

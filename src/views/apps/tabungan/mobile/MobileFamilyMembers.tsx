@@ -32,6 +32,9 @@ import { MobileListSkeleton } from './MobileSkeletons'
 // Hooks
 import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
 
+// Contexts
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 const Transition = forwardRef(function Transition(
   props: SlideProps & { children: ReactElement },
   ref: Ref<unknown>
@@ -50,6 +53,7 @@ const formatDate = (date: Date | string) => {
 const MobileFamilyMembers = () => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const dict = useTabunganDictionary()
 
   const { data, isLoading, mutate } = useTabunganData<FamilyMemberType[]>('/api/apps/tabungan/family-members')
 
@@ -112,15 +116,15 @@ const MobileFamilyMembers = () => {
 
       handleCloseDialog()
       refresh()
-      showSuccessToast(editingMember ? 'Anggota berhasil diperbarui' : 'Anggota berhasil ditambahkan')
+      showSuccessToast(editingMember ? dict.familyMembers.updateSuccess : dict.familyMembers.addSuccess)
     } catch (error) {
       console.error('Failed to save member:', error)
-      showErrorToast('Gagal menyimpan anggota')
+      showErrorToast(editingMember ? dict.familyMembers.updateFail : dict.familyMembers.addFail)
     }
   }
 
   const handleDelete = async (id: string) => {
-    const confirmed = await showDeleteConfirm('Yakin ingin menghapus anggota ini?')
+    const confirmed = await showDeleteConfirm(dict.familyMembers.deleteConfirm)
 
     if (confirmed) {
       try {
@@ -130,10 +134,10 @@ const MobileFamilyMembers = () => {
 
         if (!res.ok) throw new Error('Failed to delete')
         refresh()
-        showSuccessToast('Anggota berhasil dihapus')
+        showSuccessToast(dict.familyMembers.deleteSuccess)
       } catch (error) {
         console.error('Failed to delete member:', error)
-        showErrorToast('Gagal menghapus anggota')
+        showErrorToast(dict.familyMembers.deleteFail)
       }
     }
   }
@@ -157,7 +161,7 @@ const MobileFamilyMembers = () => {
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
           <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-            Anggota Keluarga
+            {dict.familyMembers.title}
           </Typography>
           <Box
             sx={{
@@ -278,7 +282,7 @@ const MobileFamilyMembers = () => {
       {members.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
           <i className='tabler-users-off' style={{ fontSize: 64, opacity: 0.3 }} />
-          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>Belum ada anggota</Typography>
+          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>{dict.familyMembers.empty}</Typography>
         </Box>
       )}
 
@@ -321,7 +325,7 @@ const MobileFamilyMembers = () => {
           }}
         >
           <Typography sx={{ fontWeight: 700, fontSize: '1.05rem' }}>
-            {editingMember ? 'Edit Anggota' : 'Tambah Anggota'}
+            {editingMember ? dict.familyMembers.edit : dict.familyMembers.add}
           </Typography>
           <IconButton onClick={handleCloseDialog} size='small'>
             <i className='tabler-x' style={{ fontSize: 22 }} />
@@ -331,19 +335,19 @@ const MobileFamilyMembers = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
             <TextField
               fullWidth
-              label='Nama'
+              label={dict.familyMembers.name}
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
             />
             <TextField
               fullWidth
-              label='Peran (Ayah, Ibu, Anak, dll)'
+              label={dict.familyMembers.role}
               value={formData.role}
               onChange={e => setFormData({ ...formData, role: e.target.value })}
             />
             <TextField
               fullWidth
-              label='URL Avatar (opsional)'
+              label={dict.familyMembers.color}
               value={formData.avatar}
               onChange={e => setFormData({ ...formData, avatar: e.target.value })}
             />
@@ -359,10 +363,10 @@ const MobileFamilyMembers = () => {
           }}
         >
           <Button onClick={handleCloseDialog} color='secondary' variant='outlined' fullWidth>
-            Batal
+            {dict.common.cancel}
           </Button>
           <Button onClick={handleSubmit} variant='contained' fullWidth>
-            Simpan
+            {dict.common.save}
           </Button>
         </DialogActions>
       </Dialog>

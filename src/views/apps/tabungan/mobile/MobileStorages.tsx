@@ -16,6 +16,9 @@ import { SummaryCardSkeleton, StorageCardSkeleton } from './MobileSkeletons'
 // Hook Imports
 import { useTabunganData } from '@/hooks/useTabunganData'
 
+// Contexts
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 // Types
 import type { StorageTypeType } from '@/types/apps/tabunganTypes'
 
@@ -53,6 +56,7 @@ const MobileStorages = () => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const gradients = isDark ? darkGradients : lightGradients
+  const dict = useTabunganDictionary()
 
   const { data: storagesData, isLoading: storagesLoading } = useTabunganData<StorageTypeType[]>(
     '/api/apps/tabungan/storage-types'
@@ -111,7 +115,7 @@ const MobileStorages = () => {
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
           <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-            Total Saldo Keseluruhan
+            {dict.storageTypes.title}
           </Typography>
           <ButtonBase onClick={() => setHideBalance(!hideBalance)} sx={{ borderRadius: 1, p: 0.5 }}>
             <i className={hideBalance ? 'tabler-eye-off' : 'tabler-eye'} style={{ fontSize: 18 }} />
@@ -121,7 +125,7 @@ const MobileStorages = () => {
           {mask(formatCurrency(totalBalance))}
         </Typography>
         <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-          {storages.length} akun aktif
+          {storages.length} {dict.byType.count}
         </Typography>
       </Box>
 
@@ -195,7 +199,7 @@ const MobileStorages = () => {
                 </Box>
 
                 <Typography variant='caption' sx={{ fontSize: '0.72rem', opacity: 0.9, color: '#fff', display: 'block' }}>
-                  {storage.isGold ? `${storage.goldWeight?.toFixed(2) || 0} gram • Saldo` : 'Saldo'}
+                  {storage.isGold ? `${storage.goldWeight?.toFixed(2) || 0} ${dict.storageCarousel.grams} • ${dict.storageCarousel.balance}` : dict.storageCarousel.balance}
                 </Typography>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', color: '#fff' }}>
                   {mask(formatCurrency(balance))}
@@ -209,7 +213,7 @@ const MobileStorages = () => {
       {storages.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
           <i className='tabler-wallet-off' style={{ fontSize: 64, opacity: 0.3 }} />
-          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>Belum ada dompet</Typography>
+          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>{dict.storageTypes.empty}</Typography>
         </Box>
       )}
 

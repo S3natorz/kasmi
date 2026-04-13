@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 // Next Imports
 import { usePathname, useRouter, useParams } from 'next/navigation'
@@ -14,20 +14,15 @@ import Fab from '@mui/material/Fab'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 type NavItem = {
   label: string
   icon: string
   path: string
   key: string
 }
-
-const navItems: NavItem[] = [
-  { key: 'home', label: 'Beranda', icon: 'tabler-home-2', path: '/apps/tabungan/dashboard' },
-  { key: 'transactions', label: 'Transaksi', icon: 'tabler-list-details', path: '/apps/tabungan/transactions' },
-  { key: 'add', label: 'Tambah', icon: 'tabler-plus', path: '' },
-  { key: 'storage', label: 'Dompet', icon: 'tabler-wallet', path: '/apps/tabungan/storage-types' },
-  { key: 'menu', label: 'Menu', icon: 'tabler-menu-2', path: '/apps/tabungan/settings' }
-]
 
 type Props = {
   onAddClick?: () => void
@@ -38,17 +33,29 @@ const BottomNav = ({ onAddClick }: Props) => {
   const pathname = usePathname()
   const params = useParams()
   const theme = useTheme()
+  const dict = useTabunganDictionary()
   const isDark = theme.palette.mode === 'dark'
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
 
   const lang = (params?.lang as string) || 'en'
+
+  const navItems = useMemo<NavItem[]>(
+    () => [
+      { key: 'home', label: dict.nav.home, icon: 'tabler-home-2', path: '/apps/tabungan/dashboard' },
+      { key: 'transactions', label: dict.nav.transactions, icon: 'tabler-list-details', path: '/apps/tabungan/transactions' },
+      { key: 'add', label: dict.nav.add, icon: 'tabler-plus', path: '' },
+      { key: 'storage', label: dict.nav.storage, icon: 'tabler-wallet', path: '/apps/tabungan/storage-types' },
+      { key: 'menu', label: dict.nav.menu, icon: 'tabler-menu-2', path: '/apps/tabungan/settings' }
+    ],
+    [dict]
+  )
 
   // Prefetch all nav routes on mount so tab switches are instant
   useEffect(() => {
     navItems.forEach(item => {
       if (item.path) router.prefetch(`/${lang}${item.path}`)
     })
-  }, [lang, router])
+  }, [lang, router, navItems])
 
   const isActive = (path: string) => {
     if (!path) return false

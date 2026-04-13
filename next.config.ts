@@ -79,20 +79,20 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/',
-        destination: '/en/apps/tabungan/dashboard',
+        destination: '/id/apps/tabungan/dashboard',
         permanent: true,
         locale: false
       },
       {
-        source: '/:lang(en|fr|ar)',
+        source: '/:lang(id|en|ar)',
         destination: '/:lang/apps/tabungan/dashboard',
         permanent: true,
         locale: false
       },
       {
         source:
-          '/:path((?!en|fr|ar|front-pages|images|api|icons|favicon.ico|manifest.json|apple-touch-icon|icon-|sw.js|workbox-).*)*',
-        destination: '/en/:path*',
+          '/:path((?!id|en|ar|front-pages|images|api|icons|favicon.ico|manifest.json|apple-touch-icon|icon-|sw.js|workbox-).*)*',
+        destination: '/id/:path*',
         permanent: true,
         locale: false
       }

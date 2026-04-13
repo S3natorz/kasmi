@@ -16,6 +16,9 @@ import CircularProgress from '@mui/material/CircularProgress'
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 // Type Imports
 import type { ThemeColor } from '@core/types'
 import type { TransactionType } from '@/types/apps/tabunganTypes'
@@ -41,14 +44,6 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const typeConfig: Record<string, { label: string; color: ThemeColor; icon: string }> = {
-  income: { label: 'Pemasukan', color: 'success', icon: 'tabler-arrow-up' },
-  gold_income: { label: 'Pemasukan Emas', color: 'warning', icon: 'tabler-diamond' },
-  expense: { label: 'Pengeluaran', color: 'error', icon: 'tabler-arrow-down' },
-  savings: { label: 'Tabungan', color: 'info', icon: 'tabler-coin' },
-  transfer: { label: 'Transfer', color: 'warning', icon: 'tabler-transfer' }
-}
-
 const TransactionsByTypeDialog = ({
   open,
   onClose,
@@ -59,6 +54,16 @@ const TransactionsByTypeDialog = ({
   totalAmount,
   totalCount
 }: Props) => {
+  const dict = useTabunganDictionary()
+
+  const typeConfig: Record<string, { label: string; color: ThemeColor; icon: string }> = {
+    income: { label: dict.types.income, color: 'success', icon: 'tabler-arrow-up' },
+    gold_income: { label: dict.types.incomeGold, color: 'warning', icon: 'tabler-diamond' },
+    expense: { label: dict.types.expense, color: 'error', icon: 'tabler-arrow-down' },
+    savings: { label: dict.types.savings, color: 'info', icon: 'tabler-coin' },
+    transfer: { label: dict.types.transfer, color: 'warning', icon: 'tabler-transfer' }
+  }
+
   const [transactions, setTransactions] = useState<TransactionType[]>([])
   const [loading, setLoading] = useState(false)
   useEffect(() => {
@@ -96,7 +101,7 @@ const TransactionsByTypeDialog = ({
 
   const getTypeConfig = () => {
     if (filterType === 'all') {
-      return { label: 'Semua', color: 'primary' as ThemeColor, icon: 'tabler-receipt' }
+      return { label: dict.common.all, color: 'primary' as ThemeColor, icon: 'tabler-receipt' }
     }
 
     return typeConfig[filterType] || { label: filterType, color: 'primary' as ThemeColor, icon: 'tabler-receipt' }
@@ -157,14 +162,14 @@ const TransactionsByTypeDialog = ({
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant='body2' color='text.secondary'>
-                Total {config.label}
+                {dict.byType.total} {config.label}
               </Typography>
               <Typography variant='h5' sx={{ fontWeight: 700 }} color={`${config.color}.main`}>
                 {filterType === 'all' ? (totalCount ?? transactions.length) : formatCurrency(totalAmount)}
               </Typography>
             </Box>
             <Chip
-              label={`${transactions.length} Transaksi`}
+              label={`${transactions.length} ${dict.byType.count}`}
               color={config.color}
               size='small'
               variant='tonal'
@@ -308,10 +313,10 @@ const TransactionsByTypeDialog = ({
             <i className='tabler-receipt-off text-3xl' />
           </CustomAvatar>
           <Typography variant='h6' color='text.secondary'>
-            Tidak ada transaksi
+            {dict.byType.empty}
           </Typography>
           <Typography variant='body2' color='text.secondary'>
-            Belum ada transaksi {config.label.toLowerCase()} pada periode ini
+            {dict.byType.empty}
           </Typography>
         </Box>
       )}

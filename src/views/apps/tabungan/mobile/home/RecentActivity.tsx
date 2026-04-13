@@ -9,6 +9,9 @@ import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
 import Chip from '@mui/material/Chip'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 // Type Imports
 import type { TransactionType } from '@/types/apps/tabunganTypes'
 
@@ -23,22 +26,7 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const formatDate = (date: Date | string) => {
-  if (isWibToday(date)) return 'Hari ini'
-  if (isWibYesterday(date)) return 'Kemarin'
-
-  return formatWibDate(date, { day: 'numeric', month: 'short' })
-}
-
 type FilterType = 'all' | 'income' | 'expense' | 'savings' | 'transfer'
-
-const filters: { key: FilterType; label: string }[] = [
-  { key: 'all', label: 'Semua' },
-  { key: 'income', label: 'Masuk' },
-  { key: 'expense', label: 'Keluar' },
-  { key: 'savings', label: 'Tabungan' },
-  { key: 'transfer', label: 'Transfer' }
-]
 
 const typeConfig = {
   income: { icon: 'tabler-arrow-down-left', color: '#28C76F', bg: 'rgba(40, 199, 111, 0.12)', sign: '+' },
@@ -56,6 +44,7 @@ type Props = {
 }
 
 const RecentActivity = ({ transactions, hideBalance, onTransactionClick, onSeeAllClick }: Props) => {
+  const dict = useTabunganDictionary()
   const [filter, setFilter] = useState<FilterType>('all')
 
   const filtered = useMemo(() => {
@@ -64,17 +53,35 @@ const RecentActivity = ({ transactions, hideBalance, onTransactionClick, onSeeAl
     return transactions.filter(t => t.type === filter)
   }, [transactions, filter])
 
+  const filters: { key: FilterType; label: string }[] = useMemo(
+    () => [
+      { key: 'all', label: dict.filters.all },
+      { key: 'income', label: dict.filters.income },
+      { key: 'expense', label: dict.filters.expense },
+      { key: 'savings', label: dict.filters.savings },
+      { key: 'transfer', label: dict.filters.transfer }
+    ],
+    [dict]
+  )
+
+  const formatDate = (date: Date | string) => {
+    if (isWibToday(date)) return dict.dates.today
+    if (isWibYesterday(date)) return dict.dates.yesterday
+
+    return formatWibDate(date, { day: 'numeric', month: 'short' })
+  }
+
   const maskValue = (value: string) => (hideBalance ? '••••••' : value)
 
   return (
     <Box sx={{ pt: 3 }}>
       <Box sx={{ px: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
         <Typography variant='subtitle2' sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
-          Transaksi Terbaru
+          {dict.recentActivity.title}
         </Typography>
         <ButtonBase onClick={onSeeAllClick} sx={{ borderRadius: 1, px: 1 }}>
           <Typography variant='caption' sx={{ color: 'primary.main', fontWeight: 600, fontSize: '0.75rem' }}>
-            Lihat Semua
+            {dict.recentActivity.seeAll}
             <i className='tabler-chevron-right' style={{ fontSize: 14, verticalAlign: 'middle', marginLeft: 2 }} />
           </Typography>
         </ButtonBase>
@@ -127,7 +134,7 @@ const RecentActivity = ({ transactions, hideBalance, onTransactionClick, onSeeAl
           >
             <i className='tabler-inbox' style={{ fontSize: 48, opacity: 0.4 }} />
             <Typography variant='body2' sx={{ mt: 1, fontSize: '0.85rem' }}>
-              Tidak ada transaksi
+              {dict.recentActivity.empty}
             </Typography>
           </Box>
         ) : (

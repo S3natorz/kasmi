@@ -16,6 +16,9 @@ import CircularProgress from '@mui/material/CircularProgress'
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 // Type Imports
 import type { StorageTypeType, TransactionType } from '@/types/apps/tabunganTypes'
 
@@ -33,15 +36,17 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const typeConfig: Record<string, { label: string; color: 'success' | 'error' | 'info' | 'warning'; icon: string }> = {
-  income: { label: 'Pemasukan', color: 'success', icon: 'tabler-arrow-up' },
-  gold_income: { label: 'Pemasukan Emas', color: 'warning', icon: 'tabler-diamond' },
-  expense: { label: 'Pengeluaran', color: 'error', icon: 'tabler-arrow-down' },
-  savings: { label: 'Tabungan', color: 'info', icon: 'tabler-coin' },
-  transfer: { label: 'Transfer', color: 'warning', icon: 'tabler-transfer' }
-}
-
 const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
+  const dict = useTabunganDictionary()
+
+  const typeConfig: Record<string, { label: string; color: 'success' | 'error' | 'info' | 'warning'; icon: string }> = {
+    income: { label: dict.types.income, color: 'success', icon: 'tabler-arrow-up' },
+    gold_income: { label: dict.types.incomeGold, color: 'warning', icon: 'tabler-diamond' },
+    expense: { label: dict.types.expense, color: 'error', icon: 'tabler-arrow-down' },
+    savings: { label: dict.types.savings, color: 'info', icon: 'tabler-coin' },
+    transfer: { label: dict.types.transfer, color: 'warning', icon: 'tabler-transfer' }
+  }
+
   const [transactions, setTransactions] = useState<TransactionType[]>([])
   const [loading, setLoading] = useState(false)
   const [goldPrice, setGoldPrice] = useState<number>(0)
@@ -174,7 +179,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 <Typography
                   sx={{ color: storage.isGold ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}
                 >
-                  {storage.isGold ? 'Simpanan Emas' : 'Riwayat Transaksi'}
+                  {storage.isGold ? dict.types.incomeGold : dict.storageDialog.title}
                 </Typography>
               </Box>
             </Box>
@@ -202,7 +207,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 </Typography>
                 <Typography sx={{ fontWeight: 600, color: 'rgba(0,0,0,0.7)', fontSize: '1.2rem' }}>gram</Typography>
               </Box>
-              <Typography sx={{ color: 'rgba(0,0,0,0.6)', fontSize: '0.85rem' }}>Berat Emas</Typography>
+              <Typography sx={{ color: 'rgba(0,0,0,0.6)', fontSize: '0.85rem' }}>{dict.fields.grams}</Typography>
             </Box>
           )}
 
@@ -220,7 +225,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
           <Typography
             sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem', mb: 2 }}
           >
-            {storage.isGold ? `Nilai Saat Ini @${formatCurrency(goldPrice)}/gram` : 'Saldo Saat Ini'}
+            {storage.isGold ? `${formatCurrency(goldPrice)}/gram` : dict.storageCarousel.balance}
           </Typography>
 
           {/* Mini Stats */}
@@ -237,7 +242,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
               <Typography
                 sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}
               >
-                {storage.isGold ? 'Beli' : 'Masuk'}
+                {dict.storageDialog.totalIn}
               </Typography>
               <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {formatCurrency(totalIn)}
@@ -255,7 +260,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
               <Typography
                 sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}
               >
-                {storage.isGold ? 'Jual' : 'Keluar'}
+                {dict.storageDialog.totalOut}
               </Typography>
               <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {formatCurrency(totalOut)}
@@ -273,7 +278,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
               <Typography
                 sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}
               >
-                Transaksi
+                {dict.byType.count}
               </Typography>
               <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {transactions.length}
@@ -293,7 +298,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <i className='tabler-receipt-off text-5xl' style={{ color: '#ccc' }} />
           <Typography color='text.secondary' sx={{ mt: 2 }}>
-            Belum ada transaksi untuk simpanan ini
+            {dict.storageDialog.empty}
           </Typography>
         </Box>
       ) : (
@@ -364,12 +369,12 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                         {transaction.fromStorageTypeId === storage.id ? (
                           <>
                             <i className='tabler-arrow-right text-sm' />
-                            Ke: {transaction.toStorageType?.name || 'Lainnya'}
+                            {dict.fields.toStorage}: {transaction.toStorageType?.name || '-'}
                           </>
                         ) : (
                           <>
                             <i className='tabler-arrow-left text-sm' />
-                            Dari: {transaction.fromStorageType?.name || 'Lainnya'}
+                            {dict.fields.fromStorage}: {transaction.fromStorageType?.name || '-'}
                           </>
                         )}
                       </Typography>
