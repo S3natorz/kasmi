@@ -22,9 +22,57 @@ import { getIcons, getIconsCSS, stringToIcon } from '@iconify/utils'
 
 const require = createRequire(import.meta.url)
 
+/**
+ * Walk src/ and collect every `<prefix>-<name>` icon reference that appears
+ * verbatim in the source. We grep the strings instead of parsing the AST so
+ * dynamic uses (e.g. `category.icon || 'tabler-foo'`) get picked up too.
+ *
+ * The result is the *exact* set of icons that need to be in the generated
+ * CSS — every other icon in the bundled JSON files is dead weight.
+ */
+async function collectUsedIcons(rootDir: string, prefixes: string[]): Promise<Record<string, Set<string>>> {
+  const result: Record<string, Set<string>> = {}
+
+  for (const p of prefixes) result[p] = new Set()
+
+  const skip = new Set(['node_modules', '.next', '.open-next', '.git', 'dist', 'build', 'public'])
+  const allowedExt = new Set(['.ts', '.tsx', '.js', '.jsx', '.mdx', '.json', '.css', '.html'])
+  const blockedFiles = new Set(['generated-icons.css', 'bundle-icons-css.ts'])
+  const re = new RegExp(`\\b(${prefixes.join('|')})-([a-z0-9][a-z0-9-]*)`, 'g')
+
+  async function walk(dir: string) {
+    const entries = await fs.readdir(dir, { withFileTypes: true })
+
+    for (const e of entries) {
+      if (skip.has(e.name)) continue
+      const full = join(dir, e.name)
+
+      if (e.isDirectory()) {
+        await walk(full)
+      } else if (e.isFile()) {
+        if (blockedFiles.has(e.name)) continue
+        const ext = e.name.slice(e.name.lastIndexOf('.'))
+
+        if (!allowedExt.has(ext)) continue
+        const text = await fs.readFile(full, 'utf8')
+        let m
+
+        while ((m = re.exec(text)) !== null) {
+          result[m[1]].add(m[2])
+        }
+      }
+    }
+  }
+
+  await walk(rootDir)
+
+  return result
+}
+
 async function generateIconsCSS() {
   const __filename = fileURLToPath(import.meta.url)
   const __dirname = dirname(__filename)
+  const repoRoot = join(__dirname, '..', '..', '..')
 
   /**
    * Script configuration
@@ -64,30 +112,44 @@ async function generateIconsCSS() {
     json?: (string | BundleScriptCustomJSONConfig)[]
   }
 
+  // Collect every icon actually referenced in the source tree, then bundle
+  // ONLY those instead of the entire tabler.json (which is ~6000 icons /
+  // 2.8 MB of CSS — most of which is dead weight at runtime).
+  const usedByPrefix = await collectUsedIcons(join(repoRoot, 'src'), [
+    'tabler',
+    'bx',
+    'bi',
+    'ri',
+    'uit',
+    'twemoji'
+  ])
+
+  const tablerIcons = Array.from(usedByPrefix.tabler).sort()
+
+  console.log(
+    `[icons] subsetting bundle: ${tablerIcons.length} tabler + ` +
+      Object.entries(usedByPrefix)
+        .filter(([k]) => k !== 'tabler')
+        .map(([k, v]) => `${v.size} ${k}`)
+        .join(' + ')
+  )
+
+  const extraIcons: string[] = []
+
+  for (const [prefix, names] of Object.entries(usedByPrefix)) {
+    if (prefix === 'tabler') continue
+    for (const n of names) extraIcons.push(`${prefix}-${n}`)
+  }
+
   const sources: BundleScriptConfig = {
     json: [
-      // Iconify JSON file (@iconify/json is a package name, /json/ is directory where files are, then filename)
-      require.resolve('@iconify/json/json/tabler.json')
-
-      // Custom file with only few icons
-      /* {
-        filename: require.resolve('@iconify/json/json/line-md.json'),
-        icons: ['home-twotone-alt', 'github', 'document-list', 'document-code', 'image-twotone']
-      } */
-
-      // Custom JSON file
-      // 'json/gg.json'
+      {
+        filename: require.resolve('@iconify/json/json/tabler.json'),
+        icons: tablerIcons
+      }
     ],
 
-    icons: [
-      'bx-basket',
-      'bi-airplane-engines',
-      'ri-anchor-line',
-      'uit-adobe-alt',
-
-      // 'fa6-regular-comment',
-      'twemoji-auto-rickshaw'
-    ],
+    icons: extraIcons,
 
     svg: [
       /* {

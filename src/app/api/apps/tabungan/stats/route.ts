@@ -33,18 +33,25 @@ export async function GET(request: Request) {
     }
 
     const payload = await withPrisma(async prisma => {
-      // Get all transactions
-      const transactions = await prisma.transaction.findMany({
-        where: dateFilter,
-        include: {
-          familyMember: true,
-          savingsCategory: true,
-          expenseCategory: true,
-          fromStorageType: true,
-          toStorageType: true
-        },
-        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
-      })
+      // Fan-out all four queries in parallel — on cold pools each query
+      // costs a TCP round-trip, so awaiting them sequentially used to add
+      // ~3x the slowest-query latency for no good reason.
+      const [transactions, savingsCategories, expenseCategories, familyMembers] = await Promise.all([
+        prisma.transaction.findMany({
+          where: dateFilter,
+          include: {
+            familyMember: true,
+            savingsCategory: true,
+            expenseCategory: true,
+            fromStorageType: true,
+            toStorageType: true
+          },
+          orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
+        }),
+        prisma.savingsCategory.findMany(),
+        prisma.expenseCategory.findMany(),
+        prisma.familyMember.findMany()
+      ])
 
       // Calculate totals
       const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
@@ -56,7 +63,6 @@ export async function GET(request: Request) {
       const balance = totalIncome - totalExpenses - totalSavings
 
       // Get savings by category
-      const savingsCategories = await prisma.savingsCategory.findMany()
       const savingsByCategory = savingsCategories.map(cat => {
         const amount = transactions
           .filter(t => t.type === 'savings' && t.savingsCategoryId === cat.id)
@@ -71,7 +77,6 @@ export async function GET(request: Request) {
       })
 
       // Get expenses by category
-      const expenseCategories = await prisma.expenseCategory.findMany()
       const expensesByCategory = expenseCategories.map(cat => {
         const amount = transactions
           .filter(t => t.type === 'expense' && t.expenseCategoryId === cat.id)
@@ -86,7 +91,6 @@ export async function GET(request: Request) {
       })
 
       // Get family members contribution
-      const familyMembers = await prisma.familyMember.findMany()
       const memberContributions = familyMembers.map(member => {
         const income = transactions
           .filter(t => t.type === 'income' && t.familyMemberId === member.id)

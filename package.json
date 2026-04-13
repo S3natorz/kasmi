@@ -16,9 +16,9 @@
     "removeI18n": "tsx src/remove-translation-scripts/index.ts",
     "clean": "rm -rf .next .open-next",
     "clear": "rm -rf node_modules .next .open-next",
-    "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "opennextjs-cloudflare build && wrangler dev",
-    "cf:deploy": "opennextjs-cloudflare build && wrangler deploy",
+    "cf:build": "npm run build:icons && opennextjs-cloudflare build",
+    "cf:preview": "npm run build:icons && opennextjs-cloudflare build && wrangler dev",
+    "cf:deploy": "npm run build:icons && opennextjs-cloudflare build && wrangler deploy",
     "cf:deploy:realtime": "wrangler deploy --config workers/realtime/wrangler.toml",
     "cf:types": "wrangler types cloudflare-env.d.ts"
   },

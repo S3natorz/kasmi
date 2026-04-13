@@ -60,11 +60,18 @@ const buildClient = (): { client: PrismaClient; dispose: () => Promise<void> } =
     throw new Error('DATABASE_URL is not set')
   }
 
+  // Each request gets its own pool that lives only as long as the
+  // callback. We keep `max: 4` so a route that fans out 3-4 queries via
+  // Promise.all (e.g. /api/apps/tabungan/stats) can run them truly in
+  // parallel instead of queueing on a single socket. Connection timeout
+  // is tightened from 10s to 4s — Supavisor either responds within ~1s
+  // or the route is unhealthy anyway, so failing fast is preferable to
+  // hanging the request for ten seconds.
   const pool = new Pool({
     connectionString,
-    max: 3,
-    idleTimeoutMillis: 10_000,
-    connectionTimeoutMillis: 10_000
+    max: 4,
+    idleTimeoutMillis: 1_000,
+    connectionTimeoutMillis: 4_000
   })
 
   const adapter = new PrismaPg(pool)

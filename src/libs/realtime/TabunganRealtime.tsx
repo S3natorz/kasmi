@@ -100,12 +100,24 @@ const TabunganRealtime = () => {
       }
     }
 
-    // Lazy-connect so the first paint isn't blocked by the WS handshake.
-    const kickoff = setTimeout(connect, 500)
+    // Defer the WS handshake until the browser is idle so the initial
+    // paint and SWR fetches own the network. requestIdleCallback fires
+    // as soon as the main thread is free (typically <100ms after first
+    // paint on a warm device) and well before the user can interact —
+    // far quicker than the previous fixed 500ms timeout.
+    let kickoff: ReturnType<typeof setTimeout> | null = null
+    let idleHandle: ReturnType<typeof requestIdleCallback> | null = null
+
+    if (typeof requestIdleCallback === 'function') {
+      idleHandle = requestIdleCallback(() => connect(), { timeout: 1500 })
+    } else {
+      kickoff = setTimeout(connect, 200)
+    }
 
     return () => {
       cancelled = true
-      clearTimeout(kickoff)
+      if (kickoff) clearTimeout(kickoff)
+      if (idleHandle && typeof cancelIdleCallback === 'function') cancelIdleCallback(idleHandle)
 
       if (reconnectRef.current) clearTimeout(reconnectRef.current)
       if (pingTimer) clearInterval(pingTimer)
