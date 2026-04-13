@@ -103,7 +103,7 @@ const MobileHome = () => {
   const router = useRouter()
   const params = useParams()
   const dict = useTabunganDictionary()
-  const lang = (params?.lang as string) || 'en'
+  const lang = (params?.lang as string) || 'id'
 
   // Period filter
   const [filterType, setFilterType] = useState<FilterType>('monthly')

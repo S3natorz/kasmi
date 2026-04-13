@@ -37,7 +37,7 @@ const BottomNav = ({ onAddClick }: Props) => {
   const isDark = theme.palette.mode === 'dark'
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
 
-  const lang = (params?.lang as string) || 'en'
+  const lang = (params?.lang as string) || 'id'
 
   const navItems = useMemo<NavItem[]>(
     () => [

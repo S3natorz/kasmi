@@ -27,7 +27,7 @@ const TabunganMobileLayout = ({ children }: Props) => {
   const router = useRouter()
   const params = useParams()
   const dict = useTabunganDictionary()
-  const lang = (params?.lang as string) || 'en'
+  const lang = (params?.lang as string) || 'id'
 
   const pageMeta = useMemo<Record<string, { title: string; subtitle?: string }>>(
     () => ({

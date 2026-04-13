@@ -2,7 +2,7 @@
   "name": "Kasmi - Tabungan Keluarga",
   "short_name": "Kasmi",
   "description": "Aplikasi pencatatan tabungan dan keuangan keluarga",
-  "start_url": "/en/apps/tabungan/dashboard",
+  "start_url": "/id/apps/tabungan/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#7367f0",
