@@ -125,7 +125,19 @@ const MobileSettings = () => {
 
   const handleLangChange = (_: React.MouseEvent<HTMLElement>, code: Locale | null) => {
     if (!code || code === lang) return
+
+    // Persist the chosen locale in a long-lived cookie so the middleware
+    // can route a PWA cold-start (`/`) back to the same language. Without
+    // this, every fresh launch fell back to `id` and the user's choice
+    // looked like it was thrown away.
+    if (typeof document !== 'undefined') {
+      const oneYear = 60 * 60 * 24 * 365
+
+      document.cookie = `NEXT_LOCALE=${code}; path=/; max-age=${oneYear}; SameSite=Lax`
+    }
+
     const segments = pathname.split('/')
+
     segments[1] = code
     router.push(segments.join('/'))
   }
