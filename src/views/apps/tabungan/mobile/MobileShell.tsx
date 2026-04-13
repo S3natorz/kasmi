@@ -2,7 +2,7 @@
 
 // React Imports
 import type { ReactNode } from 'react';
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 // MUI Imports
 import Box from '@mui/material/Box'
@@ -18,47 +18,17 @@ type Props = {
   onTransactionAdded?: () => void
 }
 
+// Note: the CSS that hides the outer VerticalLayout chrome is rendered
+// from the server component at `app/[lang]/(dashboard)/(private)/apps/
+// tabungan/layout.tsx` so it's present on first paint — hiding it from
+// a client-side `useEffect` caused a visible flash of the desktop
+// chrome on every refresh before hydration landed.
 const MobileShell = ({ children, onTransactionAdded }: Props) => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
 
   const [addDialogOpen, setAddDialogOpen] = useState(false)
-
-  // Hide outer VerticalLayout navbar + sidebar so we get true fullscreen mobile feel
-  useEffect(() => {
-    const styleId = 'kasmi-mobile-shell-style'
-    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null
-
-    if (!styleEl) {
-      styleEl = document.createElement('style')
-      styleEl.id = styleId
-      styleEl.innerHTML = `
-        body.kasmi-mobile-active .ts-vertical-layout-header,
-        body.kasmi-mobile-active .ts-vertical-nav-root,
-        body.kasmi-mobile-active .ts-vertical-layout-footer,
-        body.kasmi-mobile-active .customizer {
-          display: none !important;
-        }
-        body.kasmi-mobile-active .ts-vertical-layout-content-wrapper,
-        body.kasmi-mobile-active .ts-vertical-layout-content {
-          padding: 0 !important;
-          margin: 0 !important;
-          max-width: 100% !important;
-        }
-        body.kasmi-mobile-active main {
-          padding: 0 !important;
-        }
-      `
-      document.head.appendChild(styleEl)
-    }
-
-    document.body.classList.add('kasmi-mobile-active')
-
-    return () => {
-      document.body.classList.remove('kasmi-mobile-active')
-    }
-  }, [])
 
   return (
     <Box
