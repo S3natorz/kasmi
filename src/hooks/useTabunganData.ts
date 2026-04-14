@@ -44,7 +44,17 @@ const notify = (entry: Entry) => {
 }
 
 const fetchJSON = async (url: string) => {
-  const res = await fetch(url)
+  // Every revalidation must bypass the browser's HTTP cache. Mutation
+  // endpoints (transactions/stats/storage-types) return
+  // `Cache-Control: private, max-age=5, stale-while-revalidate=60` to
+  // make back/forward navigation feel instant — but that same header
+  // was also intercepting our forced revalidations after a write, so
+  // the UI showed stale data for a few seconds until the max-age
+  // expired (the "refresh button" workaround). The module-level Map
+  // already gives us an instant render on mount; we don't need the
+  // HTTP cache on top of it, and we definitely need to bypass it when
+  // we know the server data changed.
+  const res = await fetch(url, { cache: 'no-store' })
 
   if (!res.ok) throw new Error(`Request failed: ${res.status}`)
 
