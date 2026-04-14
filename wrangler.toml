@@ -22,6 +22,21 @@ name = "REALTIME"
 class_name = "TabunganBroadcaster"
 script_name = "kasmi-realtime"
 
+# Hyperdrive — warm Postgres connection pool that lives at the edge so
+# every Worker request doesn't pay a fresh TCP+TLS+Supabase-auth round
+# trip (~1-2s). Points at the direct Supabase host; Hyperdrive itself
+# fans out to warm pools per region on Cloudflare's side.
+# See src/libs/prisma.ts for how the binding is consumed.
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "d276fc755dbd403eb9d495f684be851f"
+# Local dev fallback — Wrangler's platform proxy (used by
+# `wrangler dev` and OpenNext's env discovery at deploy time) refuses
+# to start without a fallback. Instead of pinning the password here,
+# set `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` or the
+# legacy `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` in
+# your shell (matching DATABASE_URL in .dev.vars).
+
 # R2 / KV / etc. can be added later. Secrets (DATABASE_URL, REALTIME_SECRET,
 # NEXTAUTH_SECRET, NEXT_PUBLIC_REALTIME_URL) are set via:
 #   wrangler secret put DATABASE_URL
