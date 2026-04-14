@@ -37,38 +37,60 @@ const TX_SELECT = {
   toStorageType: { select: { id: true, name: true, icon: true, color: true, isGold: true } }
 } as const
 
-// Helper function to update storage balance
+// Helper function to update storage balance.
+//
+// Uses Prisma's atomic `increment`/`decrement` so we never fall into
+// the classic read-then-write race: two concurrent PUT/POST/DELETEs
+// on the same storage would each `SELECT balance`, compute a new
+// value, and `UPDATE balance = <value>` — one write wins and the
+// other's delta is silently lost, which showed up as "saldo kepotong
+// 2x" in the UI. Atomic increments push the arithmetic down to
+// Postgres so the database serialises it.
+//
+// `balance` is modelled as Float in Prisma so negative results are
+// possible mid-transaction (e.g. a reverse-then-apply PUT that
+// temporarily pushes balance negative). We clamp back to 0 in a
+// second conditional update afterwards instead of inside the math,
+// because `Math.max(0, ...)` combined with read-then-write was the
+// source of balances drifting away from reality.
 async function updateStorageBalance(prisma: PrismaClient, storageTypeId: string, amount: number, isAdd: boolean) {
-  const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
+  if (!Number.isFinite(amount) || amount === 0) return
 
-  if (storage) {
-    const newBalance = isAdd ? storage.balance + amount : storage.balance - amount
-
-    console.log(`Updating storage ${storage.name}: ${storage.balance} ${isAdd ? '+' : '-'} ${amount} = ${newBalance}`)
+  try {
     await prisma.storageType.update({
       where: { id: storageTypeId },
-      data: { balance: Math.max(0, newBalance) }
+      data: { balance: isAdd ? { increment: amount } : { decrement: amount } }
     })
-  } else {
-    console.log(`Storage not found: ${storageTypeId}`)
+
+    // Clamp to 0 if the atomic delta pushed us negative (e.g. legacy
+    // data where the balance was already wrong). Two-step so the
+    // arithmetic stays atomic.
+    await prisma.storageType.updateMany({
+      where: { id: storageTypeId, balance: { lt: 0 } },
+      data: { balance: 0 }
+    })
+  } catch (err) {
+    console.error(`Failed to update balance for storage ${storageTypeId}:`, err)
   }
 }
 
-// Helper function to update gold weight on storage
+// Helper function to update gold weight on storage — same atomic
+// pattern as updateStorageBalance above.
 async function updateGoldWeight(prisma: PrismaClient, storageTypeId: string, grams: number, isAdd: boolean) {
-  const storage = await prisma.storageType.findUnique({ where: { id: storageTypeId } })
+  if (!Number.isFinite(grams) || grams === 0) return
 
-  if (storage) {
-    const currentWeight = storage.goldWeight || 0
-    const newWeight = isAdd ? currentWeight + grams : currentWeight - grams
-
-    console.log(`Updating gold ${storage.name}: ${currentWeight}g ${isAdd ? '+' : '-'} ${grams}g = ${newWeight}g`)
+  try {
     await prisma.storageType.update({
       where: { id: storageTypeId },
-      data: { goldWeight: Math.max(0, newWeight) }
+      data: { goldWeight: isAdd ? { increment: grams } : { decrement: grams } }
     })
-  } else {
-    console.log(`Storage not found: ${storageTypeId}`)
+
+    await prisma.storageType.updateMany({
+      where: { id: storageTypeId, goldWeight: { lt: 0 } },
+      data: { goldWeight: 0 }
+    })
+  } catch (err) {
+    console.error(`Failed to update gold weight for storage ${storageTypeId}:`, err)
   }
 }
 

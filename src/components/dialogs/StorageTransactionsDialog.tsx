@@ -1,8 +1,5 @@
 'use client'
 
-// React Imports
-import { useEffect, useState } from 'react'
-
 // MUI Imports
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -16,8 +13,14 @@ import CircularProgress from '@mui/material/CircularProgress'
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 
+// Hooks
+import { useTabunganData } from '@/hooks/useTabunganData'
+
 // Context Imports
 import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
+// Utils
+import { formatWibDate } from '@/libs/wib'
 
 // Type Imports
 import type { StorageTypeType, TransactionType } from '@/types/apps/tabunganTypes'
@@ -47,48 +50,26 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
     transfer: { label: dict.types.transfer, color: 'warning', icon: 'tabler-transfer' }
   }
 
-  const [transactions, setTransactions] = useState<TransactionType[]>([])
-  const [loading, setLoading] = useState(false)
-  const [goldPrice, setGoldPrice] = useState<number>(0)
+  // Pull via useTabunganData so this dialog automatically refreshes
+  // when anywhere in the app invalidates the transactions key (edits
+  // from EditTransactionDialog, adds from BottomNav, etc.).
+  // `?limit=5000` opts out of the default 200-row page — a single
+  // storage can easily accumulate more than that over time, and
+  // `transaksi 200` was a misleading count when the list was silently
+  // truncated.
+  const txUrl = open && storage ? `/api/apps/tabungan/transactions?storageTypeId=${storage.id}&limit=5000` : null
+  const { data: txData, isLoading } = useTabunganData<TransactionType[]>(txUrl)
 
-  useEffect(() => {
-    if (open && storage) {
-      fetchTransactions()
-      if (storage.isGold) {
-        fetchGoldPrice()
-      }
-    }
-  }, [open, storage])
+  const { data: goldData } = useTabunganData<{ pricePerGram?: number }>(
+    open && storage?.isGold ? '/api/apps/tabungan/gold-price' : null,
+    { staleTime: 5 * 60_000 }
+  )
 
-  const fetchGoldPrice = async () => {
-    try {
-      const res = await fetch('/api/apps/tabungan/gold-price')
-      const data = await res.json()
-      setGoldPrice(data.pricePerGram || 0)
-    } catch (error) {
-      console.error('Failed to fetch gold price:', error)
-    }
-  }
-
-  const fetchTransactions = async () => {
-    if (!storage) return
-
-    try {
-      setLoading(true)
-      const res = await fetch(`/api/apps/tabungan/transactions?storageTypeId=${storage.id}`)
-      const data = await res.json()
-      setTransactions(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error)
-      setTransactions([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const transactions = Array.isArray(txData) ? txData : []
+  const loading = isLoading && transactions.length === 0
+  const goldPrice = goldData?.pricePerGram || 0
 
   const handleClose = () => {
-    setTransactions([])
-    setGoldPrice(0)
     onClose()
   }
 
@@ -305,6 +286,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
         <Box sx={{ px: 2, py: 1 }}>
           {transactions.map((transaction, index) => {
             const config = typeConfig[transaction.type] || typeConfig.income
+
             const isIncoming =
               transaction.type === 'income' ||
               transaction.type === 'gold_income' ||
@@ -347,7 +329,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                       />
                     </Box>
                     <Typography variant='body2' color='text.secondary' sx={{ fontSize: '0.8rem', mt: 0.5 }}>
-                      {new Date(transaction.date).toLocaleDateString('id-ID', {
+                      {formatWibDate(transaction.date, {
                         weekday: 'short',
                         day: 'numeric',
                         month: 'short',

@@ -1,8 +1,5 @@
 'use client'
 
-// React Imports
-import { useEffect, useState } from 'react'
-
 // MUI Imports
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -16,8 +13,14 @@ import CircularProgress from '@mui/material/CircularProgress'
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 
+// Hooks
+import { useTabunganData } from '@/hooks/useTabunganData'
+
 // Context Imports
 import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
+// Utils
+import { formatWibDate, formatWibDateKey } from '@/libs/wib'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -64,38 +67,23 @@ const TransactionsByTypeDialog = ({
     transfer: { label: dict.types.transfer, color: 'warning', icon: 'tabler-transfer' }
   }
 
-  const [transactions, setTransactions] = useState<TransactionType[]>([])
-  const [loading, setLoading] = useState(false)
-  useEffect(() => {
-    if (open) {
-      fetchTransactions()
-    }
-  }, [open, filterType, startDate, endDate])
+  // SWR hook so the list re-renders when something elsewhere (an edit,
+  // an add, a delete) invalidates the transactions key. `limit=5000`
+  // opts out of the default 200-row page for bulk views.
+  const buildUrl = () => {
+    if (!open) return null
+    let url = `/api/apps/tabungan/transactions?startDate=${startDate}&endDate=${endDate}&limit=5000`
 
-  const fetchTransactions = async () => {
-    try {
-      setLoading(true)
+    if (filterType !== 'all') url += `&type=${filterType}`
 
-      let url = `/api/apps/tabungan/transactions?startDate=${startDate}&endDate=${endDate}`
-
-      if (filterType !== 'all') {
-        url += `&type=${filterType}`
-      }
-
-      const res = await fetch(url)
-      const data = await res.json()
-
-      setTransactions(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error)
-      setTransactions([])
-    } finally {
-      setLoading(false)
-    }
+    return url
   }
 
+  const { data: txData, isLoading } = useTabunganData<TransactionType[]>(buildUrl())
+  const transactions = Array.isArray(txData) ? txData : []
+  const loading = isLoading && transactions.length === 0
+
   const handleClose = () => {
-    setTransactions([])
     onClose()
   }
 
@@ -138,8 +126,8 @@ const TransactionsByTypeDialog = ({
                   {title}
                 </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  {new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} -{' '}
-                  {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {formatWibDateKey(startDate, { day: 'numeric', month: 'short' })} -{' '}
+                  {formatWibDateKey(endDate, { day: 'numeric', month: 'short', year: 'numeric' })}
                 </Typography>
               </Box>
             </Box>
@@ -226,7 +214,7 @@ const TransactionsByTypeDialog = ({
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                         <Typography variant='caption' color='text.secondary'>
-                          {new Date(transaction.date).toLocaleDateString('id-ID', {
+                          {formatWibDate(transaction.date, {
                             weekday: 'short',
                             day: 'numeric',
                             month: 'short',
