@@ -40,6 +40,8 @@ import {
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 
 // Type Imports
+import Swal from 'sweetalert2'
+
 import type { StorageTypeType } from '@/types/apps/tabunganTypes'
 
 // Component Imports
@@ -55,8 +57,10 @@ import tableStyles from '@core/styles/table.module.css'
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value)
+
   addMeta({ itemRank })
-  return itemRank.passed
+  
+return itemRank.passed
 }
 
 const formatCurrency = (amount: number) => {
@@ -70,7 +74,9 @@ const formatCurrency = (amount: number) => {
 // Format number with thousand separator (dots)
 const formatRupiahInput = (value: string) => {
   const numericValue = value.replace(/\D/g, '')
-  return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+  
+return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
 // Parse formatted value back to number string
@@ -85,19 +91,23 @@ const iconSuggestions = [
   { label: 'Uang', value: 'tabler-currency-dollar' },
   { label: 'Koin', value: 'tabler-coin' },
   { label: 'Dompet', value: 'tabler-wallet' },
+
   // Bank
   { label: 'Bank', value: 'tabler-building-bank' },
   { label: 'Kartu Debit', value: 'tabler-credit-card' },
   { label: 'Transfer', value: 'tabler-transfer' },
   { label: 'ATM', value: 'tabler-device-mobile' },
+
   // E-Wallet
   { label: 'E-Wallet', value: 'tabler-brand-google-pay' },
   { label: 'QR Code', value: 'tabler-qrcode' },
   { label: 'Scan', value: 'tabler-scan' },
+
   // Investasi
   { label: 'Emas', value: 'tabler-diamond' },
   { label: 'Saham', value: 'tabler-chart-line' },
   { label: 'Crypto', value: 'tabler-currency-bitcoin' },
+
   // Lainnya
   { label: 'Brankas', value: 'tabler-safe' },
   { label: 'Celengan', value: 'tabler-piggy-bank' },
@@ -160,6 +170,7 @@ const StorageTypesTable = () => {
       setGoldPriceLoading(true)
       const res = await fetch('/api/apps/tabungan/gold-price')
       const data = await res.json()
+
       setGoldPrice(data.pricePerGram || 0)
       setGoldPriceLastUpdated(data.lastUpdated || '')
     } catch (error) {
@@ -174,6 +185,7 @@ const StorageTypesTable = () => {
       setLoading(true)
       const res = await fetch('/api/apps/tabungan/storage-types')
       const items = await res.json()
+
       setData(Array.isArray(items) ? items : [])
     } catch (error) {
       console.error('Failed to fetch data:', error)
@@ -190,15 +202,21 @@ const StorageTypesTable = () => {
   const handleOpenDialog = (item?: StorageTypeType) => {
     if (item) {
       setEditingItem(item)
+
+      // Show the opening (initial) balance so that editing the "Saldo Awal"
+      // field changes the opening balance, not the current balance.
+      const openingBalance = item.initialBalance ?? item.balance ?? 0
+      const openingGold = item.initialGoldWeight ?? item.goldWeight ?? null
+
       setFormData({
         name: item.name,
         description: item.description || '',
         icon: item.icon || '',
         color: item.color || '',
         accountNumber: item.accountNumber || '',
-        balance: item.balance ? formatRupiahInput(item.balance.toString()) : '',
+        balance: openingBalance ? formatRupiahInput(openingBalance.toString()) : '',
         isGold: item.isGold || false,
-        goldWeight: item.goldWeight ? item.goldWeight.toString() : ''
+        goldWeight: openingGold ? openingGold.toString() : ''
       })
     } else {
       setEditingItem(null)
@@ -213,6 +231,7 @@ const StorageTypesTable = () => {
         goldWeight: ''
       })
     }
+
     setOpenDialog(true)
   }
 
@@ -225,11 +244,13 @@ const StorageTypesTable = () => {
     try {
       const url = '/api/apps/tabungan/storage-types'
       const method = editingItem ? 'PUT' : 'POST'
+
       const submitData = {
         ...formData,
         balance: formData.isGold ? '0' : parseRupiahInput(formData.balance),
         goldWeight: formData.isGold ? formData.goldWeight : null
       }
+
       const body = editingItem ? { ...submitData, id: editingItem.id } : submitData
 
       const response = await fetch(url, {
@@ -244,6 +265,7 @@ const StorageTypesTable = () => {
         fetchData()
       } else {
         const errorData = await response.json()
+
         showErrorToast(errorData.error || 'Gagal menyimpan data')
       }
     } catch (error) {
@@ -254,11 +276,13 @@ const StorageTypesTable = () => {
 
   const handleDelete = async (id: string) => {
     const confirmed = await showDeleteConfirm('Jenis simpan ini')
+
     if (confirmed) {
       try {
         const response = await fetch(`/api/apps/tabungan/storage-types?id=${id}`, {
           method: 'DELETE'
         })
+
         if (response.ok) {
           showSuccessToast('Jenis simpan berhasil dihapus!')
           fetchData()
@@ -269,6 +293,66 @@ const StorageTypesTable = () => {
         console.error('Failed to delete storage type:', error)
         showErrorToast('Terjadi kesalahan')
       }
+    }
+  }
+
+  const [recalculating, setRecalculating] = useState(false)
+
+  const handleRecalculate = async () => {
+    const result = await Swal.fire({
+      title: 'Hitung Ulang Saldo?',
+      text: 'Saldo setiap dompet & simpanan akan dihitung ulang dari Saldo Awal + seluruh transaksi. Gunakan ini kalau saldo terasa tidak sesuai.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, hitung ulang',
+      cancelButtonText: 'Batal',
+      customClass: { container: 'swal-container-top' }
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      setRecalculating(true)
+      const response = await fetch('/api/apps/tabungan/storage-types/recalculate', { method: 'POST' })
+
+      if (!response.ok) {
+        showErrorToast('Gagal menghitung ulang saldo')
+        
+return
+      }
+
+      const data = await response.json()
+
+      const changed = (data.summary || []).filter(
+        (s: any) => Math.abs(s.balanceDiff || 0) > 0.001 || Math.abs(s.goldWeightDiff || 0) > 0.00001
+      )
+
+      if (changed.length === 0) {
+        showSuccessToast('Semua saldo sudah sesuai')
+      } else {
+        const list = changed
+          .map(
+            (s: any) =>
+              `• <b>${s.name}</b>: ${formatCurrency(s.previousBalance)} → ${formatCurrency(s.newBalance)}${
+                s.isGold ? ` (${s.previousGoldWeight?.toFixed(2) || 0}g → ${s.newGoldWeight?.toFixed(2) || 0}g)` : ''
+              }`
+          )
+          .join('<br>')
+
+        await Swal.fire({
+          title: 'Saldo diperbarui',
+          html: `${changed.length} dompet/simpanan diperbarui:<br><br>${list}`,
+          icon: 'success',
+          customClass: { container: 'swal-container-top' }
+        })
+      }
+
+      fetchData()
+    } catch (error) {
+      console.error('Failed to recalculate:', error)
+      showErrorToast('Terjadi kesalahan saat menghitung ulang')
+    } finally {
+      setRecalculating(false)
     }
   }
 
@@ -313,7 +397,9 @@ const StorageTypesTable = () => {
         cell: ({ row }) => {
           if (row.original.isGold && row.original.goldWeight) {
             const goldValue = row.original.goldWeight * goldPrice
-            return (
+
+            
+return (
               <div>
                 <Typography fontWeight={500} color='warning.main'>
                   {formatCurrency(goldValue)}
@@ -324,7 +410,9 @@ const StorageTypesTable = () => {
               </div>
             )
           }
-          return (
+
+          
+return (
             <Typography fontWeight={500} color='primary.main'>
               {formatCurrency(row.original.balance)}
             </Typography>
@@ -414,6 +502,19 @@ const StorageTypesTable = () => {
                 size='small'
                 className='w-full sm:w-auto'
               />
+              <Button
+                variant='outlined'
+                color='secondary'
+                startIcon={
+                  recalculating ? <CircularProgress size={14} /> : <i className='tabler-calculator' />
+                }
+                onClick={handleRecalculate}
+                disabled={recalculating}
+                size='small'
+                className='whitespace-nowrap'
+              >
+                Hitung Ulang
+              </Button>
               <Button
                 variant='contained'
                 startIcon={<i className='tabler-plus' />}
@@ -663,6 +764,7 @@ const StorageTypesTable = () => {
                 value={formData.icon}
                 onChange={(_, newValue) => {
                   const value = typeof newValue === 'string' ? newValue : newValue?.value || ''
+
                   setFormData({ ...formData, icon: value })
                 }}
                 onInputChange={(_, newValue) => {
@@ -670,7 +772,9 @@ const StorageTypesTable = () => {
                 }}
                 renderOption={(props, option) => {
                   const { key, ...otherProps } = props
-                  return (
+
+                  
+return (
                     <Box
                       component='li'
                       key={key}

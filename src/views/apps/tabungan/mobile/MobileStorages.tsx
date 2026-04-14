@@ -7,11 +7,17 @@ import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
+import CircularProgress from '@mui/material/CircularProgress'
 import { useTheme } from '@mui/material/styles'
 
 // Component Imports
+import Swal from 'sweetalert2'
+
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
 import { SummaryCardSkeleton, StorageCardSkeleton } from './MobileSkeletons'
+
+// Utils
+import { showSuccessToast, showErrorToast } from '@/utils/swal'
 
 // Types
 import type { StorageTypeType } from '@/types/apps/tabunganTypes'
@@ -54,6 +60,7 @@ const MobileStorages = () => {
   const [storages, setStorages] = useState<StorageTypeType[]>([])
   const [goldPrice, setGoldPrice] = useState(0)
   const [loading, setLoading] = useState(true)
+
   const [hideBalance, setHideBalance] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('hideBalances') === 'true'
@@ -64,15 +71,63 @@ const MobileStorages = () => {
 
   const [selected, setSelected] = useState<StorageTypeType | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [recalculating, setRecalculating] = useState(false)
+
+  const handleRecalculate = async () => {
+    const result = await Swal.fire({
+      title: 'Hitung Ulang Saldo?',
+      text: 'Saldo setiap dompet & simpanan akan dihitung ulang dari Saldo Awal + seluruh transaksi.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, hitung ulang',
+      cancelButtonText: 'Batal',
+      customClass: { container: 'swal-container-top' }
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      setRecalculating(true)
+      const res = await fetch('/api/apps/tabungan/storage-types/recalculate', { method: 'POST' })
+
+      if (!res.ok) {
+        showErrorToast('Gagal menghitung ulang saldo')
+        
+return
+      }
+
+      const data = await res.json()
+
+      const changed = (data.summary || []).filter(
+        (s: any) => Math.abs(s.balanceDiff || 0) > 0.001 || Math.abs(s.goldWeightDiff || 0) > 0.00001
+      )
+
+      if (changed.length === 0) {
+        showSuccessToast('Semua saldo sudah sesuai')
+      } else {
+        showSuccessToast(`${changed.length} dompet/simpanan diperbarui`)
+      }
+
+      fetchData()
+    } catch (error) {
+      console.error('Failed to recalculate:', error)
+      showErrorToast('Terjadi kesalahan saat menghitung ulang')
+    } finally {
+      setRecalculating(false)
+    }
+  }
 
   const fetchData = async () => {
     try {
       setLoading(true)
+
       const [storageRes, goldRes] = await Promise.all([
         fetch('/api/apps/tabungan/storage-types'),
         fetch('/api/apps/tabungan/gold-price')
       ])
+
       const [s, g] = await Promise.all([storageRes.json(), goldRes.json()])
+
       setStorages(Array.isArray(s) ? s : [])
       setGoldPrice(g.pricePerGram || 0)
     } catch (e) {
@@ -124,9 +179,23 @@ const MobileStorages = () => {
           <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
             Total Saldo Keseluruhan
           </Typography>
-          <ButtonBase onClick={() => setHideBalance(!hideBalance)} sx={{ borderRadius: 1, p: 0.5 }}>
-            <i className={hideBalance ? 'tabler-eye-off' : 'tabler-eye'} style={{ fontSize: 18 }} />
-          </ButtonBase>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <ButtonBase
+              onClick={handleRecalculate}
+              disabled={recalculating}
+              sx={{ borderRadius: 1, p: 0.5, opacity: recalculating ? 0.5 : 1 }}
+              title='Hitung Ulang Saldo'
+            >
+              {recalculating ? (
+                <CircularProgress size={16} />
+              ) : (
+                <i className='tabler-calculator' style={{ fontSize: 18 }} />
+              )}
+            </ButtonBase>
+            <ButtonBase onClick={() => setHideBalance(!hideBalance)} sx={{ borderRadius: 1, p: 0.5 }}>
+              <i className={hideBalance ? 'tabler-eye-off' : 'tabler-eye'} style={{ fontSize: 18 }} />
+            </ButtonBase>
+          </Box>
         </Box>
         <Typography sx={{ fontWeight: 800, fontSize: '1.6rem', color: 'primary.main' }}>
           {mask(formatCurrency(totalBalance))}

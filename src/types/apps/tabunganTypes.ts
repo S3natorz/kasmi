@@ -43,9 +43,12 @@ export type StorageTypeType = {
   color?: string | null
   accountNumber?: string | null
   balance: number
+  initialBalance?: number
+
   // Gold storage fields
   isGold?: boolean
   goldWeight?: number | null // Weight in grams
+  initialGoldWeight?: number | null
   createdAt: Date
   updatedAt: Date
 }
@@ -62,6 +65,7 @@ export type TransactionType = {
   savingsCategory?: SavingsCategoryType | null
   expenseCategoryId?: string | null
   expenseCategory?: ExpenseCategoryType | null
+
   // Transfer fields
   fromStorageTypeId?: string | null
   fromStorageType?: StorageTypeType | null
