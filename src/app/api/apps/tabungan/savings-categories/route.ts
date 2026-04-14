@@ -2,27 +2,30 @@ import { NextResponse } from 'next/server'
 
 import { withPrisma } from '@/libs/prisma'
 import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
+import { edgeCached } from '@/libs/edgeCache'
 
 // GET - Get all savings categories
-export async function GET() {
-  try {
-    const categories = await withPrisma(prisma =>
-      prisma.savingsCategory.findMany({
-        include: { storageType: true },
-        orderBy: { createdAt: 'desc' }
-      })
-    )
+export async function GET(request: Request) {
+  return edgeCached(request, { ttlSeconds: 30 }, async () => {
+    try {
+      const categories = await withPrisma(prisma =>
+        prisma.savingsCategory.findMany({
+          include: { storageType: true },
+          orderBy: { createdAt: 'desc' }
+        })
+      )
 
-    return NextResponse.json(categories, {
-      headers: {
-        // Categories rarely change; sockets invalidate on writes so a
-        // generous SWR window keeps repeat navigations instant.
-        'Cache-Control': 'private, max-age=30, stale-while-revalidate=120'
-      }
-    })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch savings categories' }, { status: 500 })
-  }
+      return NextResponse.json(categories, {
+        headers: {
+          // Categories rarely change; sockets invalidate on writes so a
+          // generous SWR window keeps repeat navigations instant.
+          'Cache-Control': 'private, max-age=30, stale-while-revalidate=120'
+        }
+      })
+    } catch (error) {
+      return NextResponse.json({ error: 'Failed to fetch savings categories' }, { status: 500 })
+    }
+  })
 }
 
 // POST - Create new savings category

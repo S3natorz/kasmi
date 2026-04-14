@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 
 import { withPrisma } from '@/libs/prisma'
+import { edgeCached } from '@/libs/edgeCache'
 import { wibStartOfDay, wibEndOfDay, wibMonthRange } from '@/libs/wib'
 
 // GET - Get dashboard statistics
 export async function GET(request: Request) {
+  return edgeCached(request, { ttlSeconds: 10 }, async () => {
   try {
     const { searchParams } = new URL(request.url)
     const startDateParam = searchParams.get('startDate') // Format: YYYY-MM-DD
@@ -24,6 +26,7 @@ export async function GET(request: Request) {
     } else if (month) {
       // Legacy month filter for backward compatibility
       const { startDate, endDate } = wibMonthRange(month)
+
       dateFilter = {
         date: {
           gte: wibStartOfDay(startDate),
@@ -100,7 +103,9 @@ export async function GET(request: Request) {
         const amount = aggRows
           .filter(t => t.type === 'savings' && t.savingsCategoryId === cat.id)
           .reduce((sum, t) => sum + t.amount, 0)
-        return {
+
+        
+return {
           category: cat.name,
           amount,
           target: cat.targetAmount,
@@ -114,7 +119,9 @@ export async function GET(request: Request) {
         const amount = aggRows
           .filter(t => t.type === 'expense' && t.expenseCategoryId === cat.id)
           .reduce((sum, t) => sum + t.amount, 0)
-        return {
+
+        
+return {
           category: cat.name,
           amount,
           budget: cat.budgetLimit,
@@ -128,10 +135,13 @@ export async function GET(request: Request) {
         const income = aggRows
           .filter(t => t.type === 'income' && t.familyMemberId === member.id)
           .reduce((sum, t) => sum + t.amount, 0)
+
         const savings = aggRows
           .filter(t => t.type === 'savings' && t.familyMemberId === member.id)
           .reduce((sum, t) => sum + t.amount, 0)
-        return {
+
+        
+return {
           name: member.name,
           role: member.role,
           avatar: member.avatar,
@@ -163,6 +173,8 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'Failed to fetch statistics' }, { status: 500 })
+    
+return NextResponse.json({ error: 'Failed to fetch statistics' }, { status: 500 })
   }
+  })
 }

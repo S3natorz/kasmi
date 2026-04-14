@@ -153,7 +153,7 @@ const TransactionListTable = () => {
     try {
       setLoading(true)
       const [transRes, membersRes, savingsRes, expensesRes, storageRes] = await Promise.all([
-        fetch('/api/apps/tabungan/transactions'),
+        fetch('/api/apps/tabungan/transactions?limit=1000'),
         fetch('/api/apps/tabungan/family-members'),
         fetch('/api/apps/tabungan/savings-categories'),
         fetch('/api/apps/tabungan/expense-categories'),

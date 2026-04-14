@@ -43,7 +43,7 @@ const notify = (entry: Entry) => {
   entry.listeners.forEach(l => l(entry.data))
 }
 
-const fetchJSON = async (url: string) => {
+const fetchJSON = async (url: string, bustEdge = false) => {
   // Every revalidation must bypass the browser's HTTP cache. Mutation
   // endpoints (transactions/stats/storage-types) return
   // `Cache-Control: private, max-age=5, stale-while-revalidate=60` to
@@ -54,7 +54,20 @@ const fetchJSON = async (url: string) => {
   // already gives us an instant render on mount; we don't need the
   // HTTP cache on top of it, and we definitely need to bypass it when
   // we know the server data changed.
-  const res = await fetch(url, { cache: 'no-store' })
+  //
+  // `bustEdge` additionally appends a disposable query param so the
+  // Cloudflare edge cache (which keys on the full URL) misses and we
+  // fetch fresh from the origin. Used when a mutation/socket event
+  // told us the server state just changed.
+  let target = url
+
+  if (bustEdge) {
+    const sep = url.includes('?') ? '&' : '?'
+
+    target = `${url}${sep}_cb=${Date.now()}`
+  }
+
+  const res = await fetch(target, { cache: 'no-store' })
 
   if (!res.ok) throw new Error(`Request failed: ${res.status}`)
 
@@ -82,7 +95,7 @@ export function useTabunganData<T = any>(url: string | null, options: UseTabunga
 
   urlRef.current = url
 
-  const revalidate = useCallback(async (target?: string) => {
+  const revalidate = useCallback(async (target?: string, opts?: { bustEdge?: boolean }) => {
     const key = target ?? urlRef.current
 
     if (!key) return
@@ -93,7 +106,11 @@ export function useTabunganData<T = any>(url: string | null, options: UseTabunga
 
     setIsValidating(true)
 
-    const p = fetchJSON(key)
+    // Default to busting the edge cache for any explicit revalidation —
+    // the only path that passes `bustEdge: false` is the initial
+    // on-mount hydration, where the edge cache is exactly what we want
+    // to hit for speed.
+    const p = fetchJSON(key, opts?.bustEdge ?? true)
       .then(result => {
         e.data = result
         e.ts = Date.now()
@@ -132,7 +149,10 @@ export function useTabunganData<T = any>(url: string | null, options: UseTabunga
     const stale = !e.data || Date.now() - e.ts > staleTime
 
     if (stale) {
-      revalidate(url).catch(() => {})
+      // On-mount hydration: let the request hit the edge cache if present,
+      // so first paint is fast. Only explicit invalidations (writes,
+      // socket events) should force-bust the edge.
+      revalidate(url, { bustEdge: false }).catch(() => {})
     }
 
     return () => {

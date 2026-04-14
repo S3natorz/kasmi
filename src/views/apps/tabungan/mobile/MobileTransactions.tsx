@@ -89,7 +89,11 @@ const MobileTransactions = () => {
     return formatWibDateKey(key, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   }
 
-  const { data: txData, isLoading, mutate } = useTabunganData<TransactionType[]>('/api/apps/tabungan/transactions')
+  // Request the full history view; the GET route defaults to 200 rows now
+  // so full-list pages have to opt into a larger page explicitly.
+  const { data: txData, isLoading, mutate } = useTabunganData<TransactionType[]>(
+    '/api/apps/tabungan/transactions?limit=1000'
+  )
 
   const data = Array.isArray(txData) ? txData : []
   const loading = isLoading && data.length === 0

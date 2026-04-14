@@ -2,27 +2,30 @@ import { NextResponse } from 'next/server'
 
 import { withPrisma } from '@/libs/prisma'
 import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
+import { edgeCached } from '@/libs/edgeCache'
 
 // GET - Get all storage types
-export async function GET() {
-  try {
-    const storageTypes = await withPrisma(prisma =>
-      prisma.storageType.findMany({
-        orderBy: { name: 'asc' }
-      })
-    )
+export async function GET(request: Request) {
+  return edgeCached(request, { ttlSeconds: 10 }, async () => {
+    try {
+      const storageTypes = await withPrisma(prisma =>
+        prisma.storageType.findMany({
+          orderBy: { name: 'asc' }
+        })
+      )
 
-    return NextResponse.json(storageTypes, {
-      headers: {
-        // Sockets invalidate the SWR cache the moment a storage type
-        // changes, so a short max-age + SWR is safe and lets the browser
-        // serve back/forward navigations instantly while it revalidates.
-        'Cache-Control': 'private, max-age=10, stale-while-revalidate=60'
-      }
-    })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch storage types' }, { status: 500 })
-  }
+      return NextResponse.json(storageTypes, {
+        headers: {
+          // Sockets invalidate the SWR cache the moment a storage type
+          // changes, so a short max-age + SWR is safe and lets the browser
+          // serve back/forward navigations instantly while it revalidates.
+          'Cache-Control': 'private, max-age=10, stale-while-revalidate=60'
+        }
+      })
+    } catch (error) {
+      return NextResponse.json({ error: 'Failed to fetch storage types' }, { status: 500 })
+    }
+  })
 }
 
 // POST - Create new storage type

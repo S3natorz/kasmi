@@ -3,7 +3,15 @@ import { NextResponse } from 'next/server'
 import type { PrismaClient } from '@/generated/prisma/client'
 import { withPrisma } from '@/libs/prisma'
 import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
+import { edgeCached } from '@/libs/edgeCache'
 import { wibDateAtNoon, wibStartOfDay, wibEndOfDay, wibToday } from '@/libs/wib'
+
+// Default page size for the list endpoint. The old behaviour was "return
+// every transaction ever" which pushed 400+ KB down the wire on every
+// dashboard mount. 200 is plenty for the mobile home's "recent" view and
+// the transactions page paginates on top of this via `?limit=&offset=`.
+const DEFAULT_LIMIT = 200
+const MAX_LIMIT = 1000
 
 // Single source of truth for the `select` shape used by every read in this
 // route — keeps GET and POST/PUT response payloads identical so SWR caches
@@ -66,57 +74,67 @@ async function updateGoldWeight(prisma: PrismaClient, storageTypeId: string, gra
 
 // GET - Get all transactions with filters
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const type = searchParams.get('type')
-    const familyMemberId = searchParams.get('familyMemberId')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
-    const storageTypeId = searchParams.get('storageTypeId')
+  return edgeCached(request, { ttlSeconds: 10 }, async () => {
+    try {
+      const { searchParams } = new URL(request.url)
+      const type = searchParams.get('type')
+      const familyMemberId = searchParams.get('familyMemberId')
+      const startDate = searchParams.get('startDate')
+      const endDate = searchParams.get('endDate')
+      const storageTypeId = searchParams.get('storageTypeId')
 
-    const where: any = {}
+      const limitParam = parseInt(searchParams.get('limit') || '', 10)
+      const offsetParam = parseInt(searchParams.get('offset') || '', 10)
+      const take = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, MAX_LIMIT) : DEFAULT_LIMIT
+      const skip = Number.isFinite(offsetParam) && offsetParam > 0 ? offsetParam : 0
 
-    if (type) where.type = type
-    if (familyMemberId) where.familyMemberId = familyMemberId
+      const where: any = {}
 
-    if (startDate || endDate) {
-      where.date = {}
-      if (startDate) where.date.gte = wibStartOfDay(startDate)
-      if (endDate) where.date.lte = wibEndOfDay(endDate)
-    }
+      if (type) where.type = type
+      if (familyMemberId) where.familyMemberId = familyMemberId
 
-    // Filter by storageTypeId (either from or to)
-    if (storageTypeId) {
-      where.OR = [{ fromStorageTypeId: storageTypeId }, { toStorageTypeId: storageTypeId }]
-    }
-
-    const transactions = await withPrisma(prisma =>
-      prisma.transaction.findMany({
-        where,
-        // `select` instead of `include` so we only ship the columns the UI
-        // actually renders. The full StorageType row (accountNumber, balance,
-        // isGold, goldWeight, createdAt, updatedAt, ...) was inflating each
-        // transaction by ~400 bytes; on a list of 500 rows that's 200 KB of
-        // dead weight per response.
-        select: TX_SELECT,
-        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
-      })
-    )
-
-    return NextResponse.json(transactions, {
-      headers: {
-        // Allow the browser to serve the cached payload instantly while a
-        // background revalidation refetches. Sockets and the SWR cache
-        // already invalidate on writes, so a short max-age is safe and
-        // makes back/forward navigation feel instant.
-        'Cache-Control': 'private, max-age=5, stale-while-revalidate=60'
+      if (startDate || endDate) {
+        where.date = {}
+        if (startDate) where.date.gte = wibStartOfDay(startDate)
+        if (endDate) where.date.lte = wibEndOfDay(endDate)
       }
-    })
-  } catch (error) {
-    console.error('Failed to fetch transactions:', error)
 
-    return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
-  }
+      // Filter by storageTypeId (either from or to)
+      if (storageTypeId) {
+        where.OR = [{ fromStorageTypeId: storageTypeId }, { toStorageTypeId: storageTypeId }]
+      }
+
+      const transactions = await withPrisma(prisma =>
+        prisma.transaction.findMany({
+          where,
+
+          // `select` instead of `include` so we only ship the columns the UI
+          // actually renders. The full StorageType row (accountNumber, balance,
+          // isGold, goldWeight, createdAt, updatedAt, ...) was inflating each
+          // transaction by ~400 bytes; on a list of 500 rows that's 200 KB of
+          // dead weight per response.
+          select: TX_SELECT,
+          orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+          take,
+          skip
+        })
+      )
+
+      return NextResponse.json(transactions, {
+        headers: {
+          // Allow the browser to serve the cached payload instantly while a
+          // background revalidation refetches. Sockets and the SWR cache
+          // already invalidate on writes, so a short max-age is safe and
+          // makes back/forward navigation feel instant.
+          'Cache-Control': 'private, max-age=5, stale-while-revalidate=60'
+        }
+      })
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error)
+
+      return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
+    }
+  })
 }
 
 // POST - Create new transaction
