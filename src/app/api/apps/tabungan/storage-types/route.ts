@@ -28,11 +28,19 @@ export async function GET(request: Request) {
   })
 }
 
-// POST - Create new storage type
+// POST - Create new storage type.
+//
+// The submitted `balance` is the *opening* balance — we store it into
+// both `balance` (current) and `initialBalance` (stable reference) so the
+// recalculate endpoint has a deterministic anchor:
+//
+//   balance = initialBalance + sum(tx effects)
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const isGold = body.isGold === true || body.isGold === 'true'
+    const balance = body.balance ? parseFloat(body.balance) : 0
+    const goldWeight = isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
 
     const storageType = await withPrisma(prisma =>
       prisma.storageType.create({
@@ -42,9 +50,11 @@ export async function POST(request: Request) {
           icon: body.icon || null,
           color: body.color || null,
           accountNumber: body.accountNumber || null,
-          balance: body.balance ? parseFloat(body.balance) : 0,
-          isGold: isGold,
-          goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
+          balance,
+          initialBalance: balance,
+          isGold,
+          goldWeight,
+          initialGoldWeight: goldWeight
         }
       })
     )
@@ -59,14 +69,35 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT - Update storage type
+// PUT - Update storage type.
+//
+// The form's "Saldo Awal" (and gold weight) field is pre-filled from
+// `initialBalance` / `initialGoldWeight`, so the submitted `balance` /
+// `goldWeight` is the *opening* balance the user wants.
+//
+// We shift the current balance by the same delta so existing tx history
+// stays intact: if the user raises opening balance by +100k, current
+// balance also goes +100k, preserving `balance = initialBalance + Σ(tx)`.
+// If they don't touch the field, the delta is 0 and nothing moves.
 export async function PUT(request: Request) {
   try {
     const body = await request.json()
     const isGold = body.isGold === true || body.isGold === 'true'
+    const nextInitialBalance = body.balance != null && body.balance !== '' ? parseFloat(body.balance) : 0
+    const nextInitialGoldWeight = isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
 
-    const storageType = await withPrisma(prisma =>
-      prisma.storageType.update({
+    const storageType = await withPrisma(async prisma => {
+      const existing = await prisma.storageType.findUnique({ where: { id: body.id } })
+
+      if (!existing) throw new Error('STORAGE_TYPE_NOT_FOUND')
+
+      const prevInitial = existing.initialBalance ?? existing.balance ?? 0
+      const prevInitialGold = existing.initialGoldWeight ?? existing.goldWeight ?? null
+
+      const balanceDelta = nextInitialBalance - prevInitial
+      const goldDelta = (nextInitialGoldWeight ?? 0) - (prevInitialGold ?? 0)
+
+      return prisma.storageType.update({
         where: { id: body.id },
         data: {
           name: body.name,
@@ -74,17 +105,25 @@ export async function PUT(request: Request) {
           icon: body.icon || null,
           color: body.color || null,
           accountNumber: body.accountNumber || null,
-          balance: body.balance ? parseFloat(body.balance) : 0,
-          isGold: isGold,
-          goldWeight: isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
+          balance: (existing.balance ?? 0) + balanceDelta,
+          initialBalance: nextInitialBalance,
+          isGold,
+          goldWeight: isGold ? (existing.goldWeight ?? 0) + goldDelta : null,
+          initialGoldWeight: isGold ? nextInitialGoldWeight : null
         }
       })
-    )
+    })
 
     emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
 
     return NextResponse.json(storageType)
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === 'STORAGE_TYPE_NOT_FOUND') {
+      return NextResponse.json({ error: 'Storage type not found' }, { status: 404 })
+    }
+
+    console.error('Failed to update storage type:', error)
+
     return NextResponse.json({ error: 'Failed to update storage type' }, { status: 500 })
   }
 }

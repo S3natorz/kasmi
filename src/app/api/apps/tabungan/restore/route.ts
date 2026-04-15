@@ -49,8 +49,15 @@ export async function POST(request: Request) {
             color: s.color || null,
             accountNumber: s.accountNumber || null,
             balance: s.balance || 0,
+
+            // For older backups without initialBalance, fall back to the
+            // stored balance so the recalculate invariant
+            // (balance = initialBalance + Σ tx effects) still holds when
+            // no transactions exist yet.
+            initialBalance: s.initialBalance != null ? s.initialBalance : s.balance || 0,
             isGold: s.isGold || false,
             goldWeight: s.goldWeight || null,
+            initialGoldWeight: s.initialGoldWeight != null ? s.initialGoldWeight : s.goldWeight || null,
             createdAt: new Date(s.createdAt),
             updatedAt: new Date(s.updatedAt)
           }))

@@ -7,17 +7,24 @@ import { useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
+import CircularProgress from '@mui/material/CircularProgress'
 import { useTheme } from '@mui/material/styles'
+
+// Third-party Imports
+import Swal from 'sweetalert2'
 
 // Component Imports
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
 import { SummaryCardSkeleton, StorageCardSkeleton } from './MobileSkeletons'
 
 // Hook Imports
-import { useTabunganData } from '@/hooks/useTabunganData'
+import { useTabunganData, invalidateMany } from '@/hooks/useTabunganData'
 
 // Contexts
 import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
+// Utils
+import { showSuccessToast, showErrorToast } from '@/utils/swal'
 
 // Types
 import type { StorageTypeType } from '@/types/apps/tabunganTypes'
@@ -78,6 +85,54 @@ const MobileStorages = () => {
 
   const [selected, setSelected] = useState<StorageTypeType | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [recalculating, setRecalculating] = useState(false)
+
+  const handleRecalculate = async () => {
+    const result = await Swal.fire({
+      title: dict.storageTypes.recalculateTitle,
+      text: dict.storageTypes.recalculateBody,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: dict.storageTypes.recalculateConfirm,
+      cancelButtonText: dict.storageTypes.recalculateCancel,
+      customClass: { container: 'swal-container-top' }
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      setRecalculating(true)
+      const res = await fetch('/api/apps/tabungan/storage-types/recalculate', { method: 'POST' })
+
+      if (!res.ok) {
+        showErrorToast(dict.storageTypes.recalculateFail)
+
+        return
+      }
+
+      const data = await res.json()
+
+      const changed = (data.summary || []).filter(
+        (s: any) => Math.abs(s.balanceDiff || 0) > 0.001 || Math.abs(s.goldWeightDiff || 0) > 0.00001
+      )
+
+      if (changed.length === 0) {
+        showSuccessToast(dict.storageTypes.recalculateNoChange)
+      } else {
+        showSuccessToast(dict.storageTypes.recalculateUpdated.replace('{count}', String(changed.length)))
+      }
+
+      // Invalidate every cache key that derives from storage balances so
+      // all mounted SWR consumers (home, carousel, this page, dialogs)
+      // refetch immediately — doesn't wait for the websocket broadcast.
+      invalidateMany(['/api/apps/tabungan/storage-types', '/api/apps/tabungan/stats'])
+    } catch (error) {
+      console.error('Failed to recalculate:', error)
+      showErrorToast(dict.storageTypes.recalculateFail)
+    } finally {
+      setRecalculating(false)
+    }
+  }
 
   const mask = (v: string) => (hideBalance ? '••••••' : v)
 
@@ -117,9 +172,23 @@ const MobileStorages = () => {
           <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
             {dict.storageTypes.title}
           </Typography>
-          <ButtonBase onClick={() => setHideBalance(!hideBalance)} sx={{ borderRadius: 1, p: 0.5 }}>
-            <i className={hideBalance ? 'tabler-eye-off' : 'tabler-eye'} style={{ fontSize: 18 }} />
-          </ButtonBase>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <ButtonBase
+              onClick={handleRecalculate}
+              disabled={recalculating}
+              sx={{ borderRadius: 1, p: 0.5, opacity: recalculating ? 0.5 : 1 }}
+              title={dict.storageTypes.recalculate}
+            >
+              {recalculating ? (
+                <CircularProgress size={16} />
+              ) : (
+                <i className='tabler-calculator' style={{ fontSize: 18 }} />
+              )}
+            </ButtonBase>
+            <ButtonBase onClick={() => setHideBalance(!hideBalance)} sx={{ borderRadius: 1, p: 0.5 }}>
+              <i className={hideBalance ? 'tabler-eye-off' : 'tabler-eye'} style={{ fontSize: 18 }} />
+            </ButtonBase>
+          </Box>
         </Box>
         <Typography sx={{ fontWeight: 800, fontSize: '1.6rem', color: 'primary.main' }}>
           {mask(formatCurrency(totalBalance))}
