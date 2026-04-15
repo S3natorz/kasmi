@@ -30,12 +30,22 @@ script_name = "kasmi-realtime"
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "d276fc755dbd403eb9d495f684be851f"
-# Local dev fallback — Wrangler's platform proxy (used by
-# `wrangler dev` and OpenNext's env discovery at deploy time) refuses
-# to start without a fallback. Instead of pinning the password here,
-# set `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` or the
-# legacy `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` in
-# your shell (matching DATABASE_URL in .dev.vars).
+# Placeholder `localConnectionString` — only consumed by Wrangler's
+# platform proxy (used by `wrangler dev` and by OpenNext's deploy
+# wrapper, which inspects env via `getPlatformProxy` before pushing
+# the Worker). In Cloudflare CI this check would otherwise fail with:
+#
+#     UserError: ... set the value of the
+#     'CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE' ...
+#
+# The string never reaches Postgres: Miniflare only validates its
+# format. In production the binding resolves against the remote
+# Hyperdrive config via `id` above, so no secret leaks here.
+#
+# For real local dev override with the env var:
+#   export WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=<real url>
+# (or the `CLOUDFLARE_` prefixed legacy alias).
+localConnectionString = "postgres://placeholder:placeholder@127.0.0.1:5432/placeholder"
 
 # R2 / KV / etc. can be added later. Secrets (DATABASE_URL, REALTIME_SECRET,
 # NEXTAUTH_SECRET, NEXT_PUBLIC_REALTIME_URL) are set via:
