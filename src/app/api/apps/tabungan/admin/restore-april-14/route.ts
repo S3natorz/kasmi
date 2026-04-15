@@ -155,6 +155,19 @@ const requiredToken = (): string | null => {
 
 async function runRestore() {
   return withPrisma(async prisma => {
+    // 0. Ensure the opening-balance columns exist on StorageType. The
+    //    Prisma migration normally adds them (20260414230000_add_initial_balance),
+    //    but Cloudflare's native build can't run `prisma migrate deploy`
+    //    without DATABASE_URL being set as a BUILD variable. This makes
+    //    the endpoint self-healing: idempotent DDL, same effect as the
+    //    migration, safe to run repeatedly.
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE "StorageType" ADD COLUMN IF NOT EXISTS "initialBalance" DOUBLE PRECISION NOT NULL DEFAULT 0'
+    )
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE "StorageType" ADD COLUMN IF NOT EXISTS "initialGoldWeight" DOUBLE PRECISION'
+    )
+
     // 1. Sum transaction effects per storage id, constrained to tx that
     //    existed at backup time.
     const backupTx = await prisma.transaction.findMany({
