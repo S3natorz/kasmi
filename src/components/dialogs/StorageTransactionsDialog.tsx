@@ -1,8 +1,5 @@
 'use client'
 
-// React Imports
-import { useEffect, useState } from 'react'
-
 // MUI Imports
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -15,6 +12,15 @@ import CircularProgress from '@mui/material/CircularProgress'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
+
+// Hooks
+import { useTabunganData } from '@/hooks/useTabunganData'
+
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
+// Utils
+import { formatWibDate } from '@/libs/wib'
 
 // Type Imports
 import type { StorageTypeType, TransactionType } from '@/types/apps/tabunganTypes'
@@ -33,57 +39,37 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const typeConfig: Record<string, { label: string; color: 'success' | 'error' | 'info' | 'warning'; icon: string }> = {
-  income: { label: 'Pemasukan', color: 'success', icon: 'tabler-arrow-up' },
-  gold_income: { label: 'Pemasukan Emas', color: 'warning', icon: 'tabler-diamond' },
-  expense: { label: 'Pengeluaran', color: 'error', icon: 'tabler-arrow-down' },
-  savings: { label: 'Tabungan', color: 'info', icon: 'tabler-coin' },
-  transfer: { label: 'Transfer', color: 'warning', icon: 'tabler-transfer' }
-}
-
 const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
-  const [transactions, setTransactions] = useState<TransactionType[]>([])
-  const [loading, setLoading] = useState(false)
-  const [goldPrice, setGoldPrice] = useState<number>(0)
+  const dict = useTabunganDictionary()
 
-  useEffect(() => {
-    if (open && storage) {
-      fetchTransactions()
-      if (storage.isGold) {
-        fetchGoldPrice()
-      }
-    }
-  }, [open, storage])
-
-  const fetchGoldPrice = async () => {
-    try {
-      const res = await fetch('/api/apps/tabungan/gold-price')
-      const data = await res.json()
-      setGoldPrice(data.pricePerGram || 0)
-    } catch (error) {
-      console.error('Failed to fetch gold price:', error)
-    }
+  const typeConfig: Record<string, { label: string; color: 'success' | 'error' | 'info' | 'warning'; icon: string }> = {
+    income: { label: dict.types.income, color: 'success', icon: 'tabler-arrow-up' },
+    gold_income: { label: dict.types.incomeGold, color: 'warning', icon: 'tabler-diamond' },
+    expense: { label: dict.types.expense, color: 'error', icon: 'tabler-arrow-down' },
+    savings: { label: dict.types.savings, color: 'info', icon: 'tabler-coin' },
+    transfer: { label: dict.types.transfer, color: 'warning', icon: 'tabler-transfer' }
   }
 
-  const fetchTransactions = async () => {
-    if (!storage) return
+  // Pull via useTabunganData so this dialog automatically refreshes
+  // when anywhere in the app invalidates the transactions key (edits
+  // from EditTransactionDialog, adds from BottomNav, etc.).
+  // `?limit=5000` opts out of the default 200-row page — a single
+  // storage can easily accumulate more than that over time, and
+  // `transaksi 200` was a misleading count when the list was silently
+  // truncated.
+  const txUrl = open && storage ? `/api/apps/tabungan/transactions?storageTypeId=${storage.id}&limit=5000` : null
+  const { data: txData, isLoading } = useTabunganData<TransactionType[]>(txUrl)
 
-    try {
-      setLoading(true)
-      const res = await fetch(`/api/apps/tabungan/transactions?storageTypeId=${storage.id}`)
-      const data = await res.json()
-      setTransactions(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error)
-      setTransactions([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: goldData } = useTabunganData<{ pricePerGram?: number }>(
+    open && storage?.isGold ? '/api/apps/tabungan/gold-price' : null,
+    { staleTime: 5 * 60_000 }
+  )
+
+  const transactions = Array.isArray(txData) ? txData : []
+  const loading = isLoading && transactions.length === 0
+  const goldPrice = goldData?.pricePerGram || 0
 
   const handleClose = () => {
-    setTransactions([])
-    setGoldPrice(0)
     onClose()
   }
 
@@ -174,7 +160,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 <Typography
                   sx={{ color: storage.isGold ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}
                 >
-                  {storage.isGold ? 'Simpanan Emas' : 'Riwayat Transaksi'}
+                  {storage.isGold ? dict.types.incomeGold : dict.storageDialog.title}
                 </Typography>
               </Box>
             </Box>
@@ -202,7 +188,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                 </Typography>
                 <Typography sx={{ fontWeight: 600, color: 'rgba(0,0,0,0.7)', fontSize: '1.2rem' }}>gram</Typography>
               </Box>
-              <Typography sx={{ color: 'rgba(0,0,0,0.6)', fontSize: '0.85rem' }}>Berat Emas</Typography>
+              <Typography sx={{ color: 'rgba(0,0,0,0.6)', fontSize: '0.85rem' }}>{dict.fields.grams}</Typography>
             </Box>
           )}
 
@@ -220,7 +206,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
           <Typography
             sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)', fontSize: '0.85rem', mb: 2 }}
           >
-            {storage.isGold ? `Nilai Saat Ini @${formatCurrency(goldPrice)}/gram` : 'Saldo Saat Ini'}
+            {storage.isGold ? `${formatCurrency(goldPrice)}/gram` : dict.storageCarousel.balance}
           </Typography>
 
           {/* Mini Stats */}
@@ -237,7 +223,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
               <Typography
                 sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}
               >
-                {storage.isGold ? 'Beli' : 'Masuk'}
+                {dict.storageDialog.totalIn}
               </Typography>
               <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {formatCurrency(totalIn)}
@@ -255,7 +241,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
               <Typography
                 sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}
               >
-                {storage.isGold ? 'Jual' : 'Keluar'}
+                {dict.storageDialog.totalOut}
               </Typography>
               <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {formatCurrency(totalOut)}
@@ -273,7 +259,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
               <Typography
                 sx={{ color: storage.isGold ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}
               >
-                Transaksi
+                {dict.byType.count}
               </Typography>
               <Typography sx={{ color: storage.isGold ? '#000' : 'white', fontWeight: 600, fontSize: '0.9rem' }}>
                 {transactions.length}
@@ -293,13 +279,14 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <i className='tabler-receipt-off text-5xl' style={{ color: '#ccc' }} />
           <Typography color='text.secondary' sx={{ mt: 2 }}>
-            Belum ada transaksi untuk simpanan ini
+            {dict.storageDialog.empty}
           </Typography>
         </Box>
       ) : (
         <Box sx={{ px: 2, py: 1 }}>
           {transactions.map((transaction, index) => {
             const config = typeConfig[transaction.type] || typeConfig.income
+
             const isIncoming =
               transaction.type === 'income' ||
               transaction.type === 'gold_income' ||
@@ -342,7 +329,7 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                       />
                     </Box>
                     <Typography variant='body2' color='text.secondary' sx={{ fontSize: '0.8rem', mt: 0.5 }}>
-                      {new Date(transaction.date).toLocaleDateString('id-ID', {
+                      {formatWibDate(transaction.date, {
                         weekday: 'short',
                         day: 'numeric',
                         month: 'short',
@@ -364,12 +351,12 @@ const StorageTransactionsDialog = ({ open, onClose, storage }: Props) => {
                         {transaction.fromStorageTypeId === storage.id ? (
                           <>
                             <i className='tabler-arrow-right text-sm' />
-                            Ke: {transaction.toStorageType?.name || 'Lainnya'}
+                            {dict.fields.toStorage}: {transaction.toStorageType?.name || '-'}
                           </>
                         ) : (
                           <>
                             <i className='tabler-arrow-left text-sm' />
-                            Dari: {transaction.fromStorageType?.name || 'Lainnya'}
+                            {dict.fields.fromStorage}: {transaction.fromStorageType?.name || '-'}
                           </>
                         )}
                       </Typography>

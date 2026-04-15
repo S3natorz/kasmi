@@ -1,8 +1,5 @@
 'use client'
 
-// React Imports
-import { useEffect, useState } from 'react'
-
 // MUI Imports
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -15,6 +12,15 @@ import CircularProgress from '@mui/material/CircularProgress'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
+
+// Hooks
+import { useTabunganData } from '@/hooks/useTabunganData'
+
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
+// Utils
+import { formatWibDate, formatWibDateKey } from '@/libs/wib'
 
 // Type Imports
 import type { ThemeColor } from '@core/types'
@@ -41,14 +47,6 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-const typeConfig: Record<string, { label: string; color: ThemeColor; icon: string }> = {
-  income: { label: 'Pemasukan', color: 'success', icon: 'tabler-arrow-up' },
-  gold_income: { label: 'Pemasukan Emas', color: 'warning', icon: 'tabler-diamond' },
-  expense: { label: 'Pengeluaran', color: 'error', icon: 'tabler-arrow-down' },
-  savings: { label: 'Tabungan', color: 'info', icon: 'tabler-coin' },
-  transfer: { label: 'Transfer', color: 'warning', icon: 'tabler-transfer' }
-}
-
 const TransactionsByTypeDialog = ({
   open,
   onClose,
@@ -59,44 +57,39 @@ const TransactionsByTypeDialog = ({
   totalAmount,
   totalCount
 }: Props) => {
-  const [transactions, setTransactions] = useState<TransactionType[]>([])
-  const [loading, setLoading] = useState(false)
-  useEffect(() => {
-    if (open) {
-      fetchTransactions()
-    }
-  }, [open, filterType, startDate, endDate])
+  const dict = useTabunganDictionary()
 
-  const fetchTransactions = async () => {
-    try {
-      setLoading(true)
-
-      let url = `/api/apps/tabungan/transactions?startDate=${startDate}&endDate=${endDate}`
-
-      if (filterType !== 'all') {
-        url += `&type=${filterType}`
-      }
-
-      const res = await fetch(url)
-      const data = await res.json()
-
-      setTransactions(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error)
-      setTransactions([])
-    } finally {
-      setLoading(false)
-    }
+  const typeConfig: Record<string, { label: string; color: ThemeColor; icon: string }> = {
+    income: { label: dict.types.income, color: 'success', icon: 'tabler-arrow-up' },
+    gold_income: { label: dict.types.incomeGold, color: 'warning', icon: 'tabler-diamond' },
+    expense: { label: dict.types.expense, color: 'error', icon: 'tabler-arrow-down' },
+    savings: { label: dict.types.savings, color: 'info', icon: 'tabler-coin' },
+    transfer: { label: dict.types.transfer, color: 'warning', icon: 'tabler-transfer' }
   }
 
+  // SWR hook so the list re-renders when something elsewhere (an edit,
+  // an add, a delete) invalidates the transactions key. `limit=5000`
+  // opts out of the default 200-row page for bulk views.
+  const buildUrl = () => {
+    if (!open) return null
+    let url = `/api/apps/tabungan/transactions?startDate=${startDate}&endDate=${endDate}&limit=5000`
+
+    if (filterType !== 'all') url += `&type=${filterType}`
+
+    return url
+  }
+
+  const { data: txData, isLoading } = useTabunganData<TransactionType[]>(buildUrl())
+  const transactions = Array.isArray(txData) ? txData : []
+  const loading = isLoading && transactions.length === 0
+
   const handleClose = () => {
-    setTransactions([])
     onClose()
   }
 
   const getTypeConfig = () => {
     if (filterType === 'all') {
-      return { label: 'Semua', color: 'primary' as ThemeColor, icon: 'tabler-receipt' }
+      return { label: dict.common.all, color: 'primary' as ThemeColor, icon: 'tabler-receipt' }
     }
 
     return typeConfig[filterType] || { label: filterType, color: 'primary' as ThemeColor, icon: 'tabler-receipt' }
@@ -133,8 +126,8 @@ const TransactionsByTypeDialog = ({
                   {title}
                 </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  {new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} -{' '}
-                  {new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {formatWibDateKey(startDate, { day: 'numeric', month: 'short' })} -{' '}
+                  {formatWibDateKey(endDate, { day: 'numeric', month: 'short', year: 'numeric' })}
                 </Typography>
               </Box>
             </Box>
@@ -157,14 +150,14 @@ const TransactionsByTypeDialog = ({
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant='body2' color='text.secondary'>
-                Total {config.label}
+                {dict.byType.total} {config.label}
               </Typography>
               <Typography variant='h5' sx={{ fontWeight: 700 }} color={`${config.color}.main`}>
                 {filterType === 'all' ? (totalCount ?? transactions.length) : formatCurrency(totalAmount)}
               </Typography>
             </Box>
             <Chip
-              label={`${transactions.length} Transaksi`}
+              label={`${transactions.length} ${dict.byType.count}`}
               color={config.color}
               size='small'
               variant='tonal'
@@ -221,7 +214,7 @@ const TransactionsByTypeDialog = ({
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                         <Typography variant='caption' color='text.secondary'>
-                          {new Date(transaction.date).toLocaleDateString('id-ID', {
+                          {formatWibDate(transaction.date, {
                             weekday: 'short',
                             day: 'numeric',
                             month: 'short',
@@ -308,10 +301,10 @@ const TransactionsByTypeDialog = ({
             <i className='tabler-receipt-off text-3xl' />
           </CustomAvatar>
           <Typography variant='h6' color='text.secondary'>
-            Tidak ada transaksi
+            {dict.byType.empty}
           </Typography>
           <Typography variant='body2' color='text.secondary'>
-            Belum ada transaksi {config.label.toLowerCase()} pada periode ini
+            {dict.byType.empty}
           </Typography>
         </Box>
       )}

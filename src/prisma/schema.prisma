@@ -1,14 +1,24 @@
-// Schema untuk Vercel Postgres / Neon / Supabase
-// Rename file ini menjadi schema.prisma sebelum deploy ke Vercel
+// Schema untuk Supabase Postgres (diakses via pg + @prisma/adapter-pg
+// di Cloudflare Workers). Gunakan URL Supavisor Session mode (port 5432)
+// untuk `DATABASE_URL`; Transaction mode (port 6543) akan memecah
+// `prisma.$transaction([...])` di route restore.
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Untuk Vercel Postgres
+  directUrl = env("DIRECT_URL") // Opsional: koneksi direct Supabase untuk migration
 }
 
 generator client {
-  provider = "prisma-client-js"
+  // The new `prisma-client` generator (Prisma 6+) emits a pure-ESM client
+  // that omits the native libssl/library-engine probe which calls
+  // fs.readdir at runtime and explodes on Cloudflare Workers' unenv-based
+  // Node compat shim. `prisma-client-js` (the legacy default) still
+  // bundles that probe even when a driver adapter is used.
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  runtime      = "cloudflare"
+  moduleFormat = "esm"
 }
 
 model Account {
@@ -149,4 +159,20 @@ model Transaction {
 
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+
+  // Indexes that match the actual access patterns in the API:
+  //   - GET /api/apps/tabungan/transactions sorts by `(date desc, createdAt desc)`
+  //     and optionally filters by `type`, `familyMemberId`, and date range.
+  //   - GET /api/apps/tabungan/stats filters by date range only.
+  //   - storage-type filters use `OR` on from/to ids — separate single-column
+  //     indexes let Postgres bitmap-OR them efficiently.
+  // Without these, every list query is a sequential scan + in-memory sort,
+  // which is the single biggest source of "get transaksi" latency.
+  @@index([date(sort: Desc), createdAt(sort: Desc)])
+  @@index([type, date(sort: Desc)])
+  @@index([familyMemberId])
+  @@index([fromStorageTypeId])
+  @@index([toStorageTypeId])
+  @@index([savingsCategoryId])
+  @@index([expenseCategoryId])
 }

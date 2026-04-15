@@ -1,24 +1,40 @@
 import { NextResponse } from 'next/server'
 
-import prisma from '@/libs/prisma'
+import { withPrisma } from '@/libs/prisma'
+import { emitTabungan, TABUNGAN_EVENTS } from '@/libs/realtime/emit'
+import { edgeCached } from '@/libs/edgeCache'
 
 // GET - Get all storage types
-export async function GET() {
-  try {
-    const storageTypes = await prisma.storageType.findMany({
-      orderBy: { name: 'asc' }
-    })
+export async function GET(request: Request) {
+  return edgeCached(request, { ttlSeconds: 10 }, async () => {
+    try {
+      const storageTypes = await withPrisma(prisma =>
+        prisma.storageType.findMany({
+          orderBy: { name: 'asc' }
+        })
+      )
 
-    
-return NextResponse.json(storageTypes)
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch storage types' }, { status: 500 })
-  }
+      return NextResponse.json(storageTypes, {
+        headers: {
+          // Sockets invalidate the SWR cache the moment a storage type
+          // changes, so a short max-age + SWR is safe and lets the browser
+          // serve back/forward navigations instantly while it revalidates.
+          'Cache-Control': 'private, max-age=10, stale-while-revalidate=60'
+        }
+      })
+    } catch (error) {
+      return NextResponse.json({ error: 'Failed to fetch storage types' }, { status: 500 })
+    }
+  })
 }
 
-// POST - Create new storage type
-// The input `balance` is also persisted as `initialBalance` so we have a
-// stable reference point when recalculating balances from transactions.
+// POST - Create new storage type.
+//
+// The submitted `balance` is the *opening* balance — we store it into
+// both `balance` (current) and `initialBalance` (stable reference) so the
+// recalculate endpoint has a deterministic anchor:
+//
+//   balance = initialBalance + sum(tx effects)
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -26,34 +42,43 @@ export async function POST(request: Request) {
     const balance = body.balance ? parseFloat(body.balance) : 0
     const goldWeight = isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
 
-    const storageType = await prisma.storageType.create({
-      data: {
-        name: body.name,
-        description: body.description || null,
-        icon: body.icon || null,
-        color: body.color || null,
-        accountNumber: body.accountNumber || null,
-        balance,
-        initialBalance: balance,
-        isGold,
-        goldWeight,
-        initialGoldWeight: goldWeight
-      }
-    })
+    const storageType = await withPrisma(prisma =>
+      prisma.storageType.create({
+        data: {
+          name: body.name,
+          description: body.description || null,
+          icon: body.icon || null,
+          color: body.color || null,
+          accountNumber: body.accountNumber || null,
+          balance,
+          initialBalance: balance,
+          isGold,
+          goldWeight,
+          initialGoldWeight: goldWeight
+        }
+      })
+    )
 
-    
-return NextResponse.json(storageType, { status: 201 })
+    emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
+
+    return NextResponse.json(storageType, { status: 201 })
   } catch (error) {
     console.error(error)
-    
-return NextResponse.json({ error: 'Failed to create storage type' }, { status: 500 })
+
+    return NextResponse.json({ error: 'Failed to create storage type' }, { status: 500 })
   }
 }
 
-// PUT - Update storage type
-// When the user edits the "Saldo Awal" / gold weight, we treat it as an
-// update to the opening balance AND apply the same delta to the current
-// balance so existing tx history stays intact.
+// PUT - Update storage type.
+//
+// The form's "Saldo Awal" (and gold weight) field is pre-filled from
+// `initialBalance` / `initialGoldWeight`, so the submitted `balance` /
+// `goldWeight` is the *opening* balance the user wants.
+//
+// We shift the current balance by the same delta so existing tx history
+// stays intact: if the user raises opening balance by +100k, current
+// balance also goes +100k, preserving `balance = initialBalance + Σ(tx)`.
+// If they don't touch the field, the delta is 0 and nothing moves.
 export async function PUT(request: Request) {
   try {
     const body = await request.json()
@@ -61,42 +86,45 @@ export async function PUT(request: Request) {
     const nextInitialBalance = body.balance != null && body.balance !== '' ? parseFloat(body.balance) : 0
     const nextInitialGoldWeight = isGold && body.goldWeight ? parseFloat(body.goldWeight) : null
 
-    const existing = await prisma.storageType.findUnique({ where: { id: body.id } })
+    const storageType = await withPrisma(async prisma => {
+      const existing = await prisma.storageType.findUnique({ where: { id: body.id } })
 
-    if (!existing) {
+      if (!existing) throw new Error('STORAGE_TYPE_NOT_FOUND')
+
+      const prevInitial = existing.initialBalance ?? existing.balance ?? 0
+      const prevInitialGold = existing.initialGoldWeight ?? existing.goldWeight ?? null
+
+      const balanceDelta = nextInitialBalance - prevInitial
+      const goldDelta = (nextInitialGoldWeight ?? 0) - (prevInitialGold ?? 0)
+
+      return prisma.storageType.update({
+        where: { id: body.id },
+        data: {
+          name: body.name,
+          description: body.description || null,
+          icon: body.icon || null,
+          color: body.color || null,
+          accountNumber: body.accountNumber || null,
+          balance: (existing.balance ?? 0) + balanceDelta,
+          initialBalance: nextInitialBalance,
+          isGold,
+          goldWeight: isGold ? (existing.goldWeight ?? 0) + goldDelta : null,
+          initialGoldWeight: isGold ? nextInitialGoldWeight : null
+        }
+      })
+    })
+
+    emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
+
+    return NextResponse.json(storageType)
+  } catch (error: any) {
+    if (error?.message === 'STORAGE_TYPE_NOT_FOUND') {
       return NextResponse.json({ error: 'Storage type not found' }, { status: 404 })
     }
 
-    const prevInitial = existing.initialBalance ?? existing.balance ?? 0
-    const prevInitialGold = existing.initialGoldWeight ?? existing.goldWeight ?? null
-
-    // Shift current balance by the same delta as the initial balance so that
-    // balance == initialBalance + sum(tx effects) invariant is preserved.
-    const balanceDelta = nextInitialBalance - prevInitial
-    const goldDelta = (nextInitialGoldWeight ?? 0) - (prevInitialGold ?? 0)
-
-    const storageType = await prisma.storageType.update({
-      where: { id: body.id },
-      data: {
-        name: body.name,
-        description: body.description || null,
-        icon: body.icon || null,
-        color: body.color || null,
-        accountNumber: body.accountNumber || null,
-        balance: (existing.balance ?? 0) + balanceDelta,
-        initialBalance: nextInitialBalance,
-        isGold,
-        goldWeight: isGold ? (existing.goldWeight ?? 0) + goldDelta : null,
-        initialGoldWeight: isGold ? nextInitialGoldWeight : null
-      }
-    })
-
-    
-return NextResponse.json(storageType)
-  } catch (error) {
     console.error('Failed to update storage type:', error)
-    
-return NextResponse.json({ error: 'Failed to update storage type' }, { status: 500 })
+
+    return NextResponse.json({ error: 'Failed to update storage type' }, { status: 500 })
   }
 }
 
@@ -110,11 +138,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
-    await prisma.storageType.delete({
-      where: { id }
-    })
-    
-return NextResponse.json({ message: 'Storage type deleted successfully' })
+    await withPrisma(prisma =>
+      prisma.storageType.delete({
+        where: { id }
+      })
+    )
+    emitTabungan(TABUNGAN_EVENTS.STORAGE_TYPES_CHANGED)
+
+    return NextResponse.json({ message: 'Storage type deleted successfully' })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete storage type' }, { status: 500 })
   }

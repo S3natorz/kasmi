@@ -1,21 +1,11 @@
 'use client'
 
 // React Imports
-import { useState, useEffect, ReactNode } from 'react'
-
-// Next Imports
-import { useRouter, useParams } from 'next/navigation'
+import type { ReactNode } from 'react';
+import { useState } from 'react'
 
 // MUI Imports
 import Box from '@mui/material/Box'
-import Drawer from '@mui/material/Drawer'
-import List from '@mui/material/List'
-import ListItem from '@mui/material/ListItem'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemIcon from '@mui/material/ListItemIcon'
-import ListItemText from '@mui/material/ListItemText'
-import Typography from '@mui/material/Typography'
-import Divider from '@mui/material/Divider'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
 
@@ -23,74 +13,34 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import BottomNav from './BottomNav'
 import AddTransactionDialog from '@/components/dialogs/AddTransactionDialog'
 
+// Hooks
+import { invalidateTabuganKeys } from '@/hooks/useTabunganData'
+
 type Props = {
   children: ReactNode
   onTransactionAdded?: () => void
 }
 
-const menuItems = [
-  { label: 'Anggota Keluarga', icon: 'tabler-users', path: '/apps/tabungan/family-members' },
-  { label: 'Kategori Tabungan', icon: 'tabler-pig-money', path: '/apps/tabungan/categories/savings' },
-  { label: 'Kategori Pengeluaran', icon: 'tabler-shopping-cart', path: '/apps/tabungan/categories/expenses' },
-  { label: 'Backup & Restore', icon: 'tabler-database', path: '/apps/tabungan/backup' }
+// Keys that need to refetch after a transaction is added from the
+// global BottomNav "+" button. Prefix-matched by invalidateTabuganKeys,
+// so stats URLs with query strings are included.
+const TRANSACTION_INVALIDATION_KEYS = [
+  '/api/apps/tabungan/transactions',
+  '/api/apps/tabungan/stats',
+  '/api/apps/tabungan/storage-types'
 ]
 
+// Note: the CSS that hides the outer VerticalLayout chrome is rendered
+// from the server component at `app/[lang]/(dashboard)/(private)/apps/
+// tabungan/layout.tsx` so it's present on first paint — hiding it from
+// a client-side `useEffect` caused a visible flash of the desktop
+// chrome on every refresh before hydration landed.
 const MobileShell = ({ children, onTransactionAdded }: Props) => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
-  const router = useRouter()
-  const params = useParams()
-  const lang = (params?.lang as string) || 'en'
 
   const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-
-  // Prefetch menu drawer routes so navigation feels instant
-  useEffect(() => {
-    menuItems.forEach(item => {
-      router.prefetch(`/${lang}${item.path}`)
-    })
-  }, [lang, router])
-
-  // Hide outer VerticalLayout navbar + sidebar so we get true fullscreen mobile feel
-  useEffect(() => {
-    const styleId = 'kasmi-mobile-shell-style'
-    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null
-
-    if (!styleEl) {
-      styleEl = document.createElement('style')
-      styleEl.id = styleId
-      styleEl.innerHTML = `
-        body.kasmi-mobile-active .ts-vertical-layout-header,
-        body.kasmi-mobile-active .ts-vertical-nav-root,
-        body.kasmi-mobile-active .ts-vertical-layout-footer,
-        body.kasmi-mobile-active .customizer {
-          display: none !important;
-        }
-        body.kasmi-mobile-active .ts-vertical-layout-content-wrapper,
-        body.kasmi-mobile-active .ts-vertical-layout-content {
-          padding: 0 !important;
-          margin: 0 !important;
-          max-width: 100% !important;
-        }
-        body.kasmi-mobile-active main {
-          padding: 0 !important;
-        }
-      `
-      document.head.appendChild(styleEl)
-    }
-    document.body.classList.add('kasmi-mobile-active')
-
-    return () => {
-      document.body.classList.remove('kasmi-mobile-active')
-    }
-  }, [])
-
-  const handleMenuItemClick = (path: string) => {
-    router.push(`/${lang}${path}`)
-    setMenuOpen(false)
-  }
 
   return (
     <Box
@@ -117,67 +67,22 @@ const MobileShell = ({ children, onTransactionAdded }: Props) => {
         {children}
       </Box>
 
-      <BottomNav onAddClick={() => setAddDialogOpen(true)} onMenuClick={() => setMenuOpen(true)} />
+      <BottomNav onAddClick={() => setAddDialogOpen(true)} />
 
       <AddTransactionDialog
         open={addDialogOpen}
         onClose={() => setAddDialogOpen(false)}
         onSuccess={() => {
           setAddDialogOpen(false)
+
+          // Always bust the local SWR cache so the balance hero and
+          // transaction list refresh immediately — don't rely solely
+          // on the realtime WebSocket (which may be unset, lazy, or
+          // in a reconnect backoff window).
+          invalidateTabuganKeys(TRANSACTION_INVALIDATION_KEYS)
           onTransactionAdded?.()
         }}
       />
-
-      <Drawer
-        anchor='bottom'
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        PaperProps={{
-          sx: {
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            maxWidth: isDesktop ? 480 : '100%',
-            left: '50% !important',
-            right: 'auto !important',
-            transform: 'translateX(-50%) !important',
-            pb: 2
-          }
-        }}
-      >
-        <Box sx={{ width: 40, height: 4, backgroundColor: 'divider', borderRadius: 2, mx: 'auto', mt: 1.5, mb: 2 }} />
-        <Typography variant='h6' sx={{ px: 3, mb: 1, fontWeight: 700 }}>
-          Menu Lainnya
-        </Typography>
-        <Divider />
-        <List sx={{ pt: 1 }}>
-          {menuItems.map(item => (
-            <ListItem key={item.path} disablePadding>
-              <ListItemButton onClick={() => handleMenuItemClick(item.path)} sx={{ py: 1.5, px: 3 }}>
-                <ListItemIcon sx={{ minWidth: 42 }}>
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '10px',
-                      backgroundColor: 'rgba(115, 103, 240, 0.12)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <i className={item.icon} style={{ fontSize: 20, color: '#7367F0' }} />
-                  </Box>
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{ fontWeight: 600, fontSize: '0.95rem' }}
-                />
-                <i className='tabler-chevron-right' style={{ fontSize: 18, opacity: 0.4 }} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      </Drawer>
     </Box>
   )
 }

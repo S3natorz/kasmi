@@ -6,6 +6,9 @@ import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import { useTheme } from '@mui/material/styles'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -25,6 +28,7 @@ type Props = {
 
 const BalanceHero = ({ totalBalance, totalIncome, totalExpenses, periodLabel, hideBalance, onToggleHide }: Props) => {
   const theme = useTheme()
+  const dict = useTabunganDictionary()
   const isDark = theme.palette.mode === 'dark'
   const maskValue = (value: string) => (hideBalance ? '••••••••' : value)
 
@@ -72,7 +76,7 @@ const BalanceHero = ({ totalBalance, totalIncome, totalExpenses, periodLabel, hi
         <Box sx={{ position: 'relative', zIndex: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant='caption' sx={{ opacity: 0.9, fontSize: '0.8rem', fontWeight: 500 }}>
-              Total Saldo Keluarga
+              {dict.balanceHero.totalBalance}
             </Typography>
             <IconButton
               size='small'
@@ -126,7 +130,7 @@ const BalanceHero = ({ totalBalance, totalIncome, totalExpenses, periodLabel, hi
                   <i className='tabler-arrow-down-left' style={{ fontSize: 14, color: '#fff' }} />
                 </Box>
                 <Typography variant='caption' sx={{ opacity: 0.95, fontSize: '0.7rem' }}>
-                  Masuk
+                  {dict.balanceHero.income}
                 </Typography>
               </Box>
               <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>
@@ -157,7 +161,7 @@ const BalanceHero = ({ totalBalance, totalIncome, totalExpenses, periodLabel, hi
                   <i className='tabler-arrow-up-right' style={{ fontSize: 14, color: '#fff' }} />
                 </Box>
                 <Typography variant='caption' sx={{ opacity: 0.95, fontSize: '0.7rem' }}>
-                  Keluar
+                  {dict.balanceHero.expense}
                 </Typography>
               </Box>
               <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>

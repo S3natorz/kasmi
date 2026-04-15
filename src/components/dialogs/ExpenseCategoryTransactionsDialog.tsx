@@ -1,8 +1,5 @@
 'use client'
 
-// React Imports
-import { useEffect, useState } from 'react'
-
 // MUI Imports
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -16,6 +13,12 @@ import LinearProgress from '@mui/material/LinearProgress'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
+
+// Hooks
+import { useTabunganData } from '@/hooks/useTabunganData'
+
+// Utils
+import { formatWibDate } from '@/libs/wib'
 
 // Type Imports
 import type { TransactionType } from '@/types/apps/tabunganTypes'
@@ -49,51 +52,36 @@ const formatCurrency = (amount: number) => {
 const getProgressColor = (progress: number): 'success' | 'warning' | 'error' => {
   if (progress < 50) return 'success'
   if (progress < 100) return 'warning'
+
   return 'error'
 }
 
 const getProgressColorHex = (progress: number): string => {
   if (progress < 50) return '#72E128' // green
   if (progress < 100) return '#FDB528' // orange/warning
+
   return '#FF4D49' // red/error
 }
 
 const ExpenseCategoryTransactionsDialog = ({ open, onClose, category, startDate, endDate }: Props) => {
-  const [transactions, setTransactions] = useState<TransactionType[]>([])
-  const [loading, setLoading] = useState(false)
-  useEffect(() => {
-    if (open && category) {
-      fetchTransactions()
-    }
-  }, [open, category, startDate, endDate])
+  // SWR hook so edits elsewhere immediately reflect here. The URL
+  // itself doesn't know about the category name (server filters by
+  // type only), so we fetch all expenses in the window and narrow
+  // client-side. `limit=5000` avoids the default 200-row cap.
+  const url =
+    open && category
+      ? `/api/apps/tabungan/transactions?type=expense&startDate=${startDate}&endDate=${endDate}&limit=5000`
+      : null
 
-  const fetchTransactions = async () => {
-    if (!category) return
+  const { data: txData, isLoading } = useTabunganData<TransactionType[]>(url)
 
-    try {
-      setLoading(true)
+  const transactions = Array.isArray(txData) && category
+    ? txData.filter((t: TransactionType) => t.expenseCategory?.name === category.category)
+    : []
 
-      // Fetch transactions filtered by expense category
-      const url = `/api/apps/tabungan/transactions?type=expense&startDate=${startDate}&endDate=${endDate}`
-      const res = await fetch(url)
-      const data = await res.json()
-
-      // Filter by category name (since we don't have categoryId directly)
-      const filtered = Array.isArray(data)
-        ? data.filter((t: TransactionType) => t.expenseCategory?.name === category.category)
-        : []
-
-      setTransactions(filtered)
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error)
-      setTransactions([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = isLoading && transactions.length === 0
 
   const handleClose = () => {
-    setTransactions([])
     onClose()
   }
 
@@ -269,7 +257,7 @@ const ExpenseCategoryTransactionsDialog = ({ open, onClose, category, startDate,
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                       <Typography variant='caption' color='text.secondary'>
-                        {new Date(transaction.date).toLocaleDateString('id-ID', {
+                        {formatWibDate(transaction.date, {
                           weekday: 'short',
                           day: 'numeric',
                           month: 'short',

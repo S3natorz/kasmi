@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { forwardRef, useEffect, useMemo, useState } from 'react'
+import { forwardRef, useMemo, useState } from 'react'
 import type { ReactElement, Ref } from 'react'
 
 // MUI Imports
@@ -29,6 +29,12 @@ import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swa
 // Skeletons
 import { MobileListSkeleton } from './MobileSkeletons'
 
+// Hooks
+import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
+
+// Contexts
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 // Types
 import type { ExpenseCategoryType, SavingsCategoryType, StorageTypeType } from '@/types/apps/tabunganTypes'
 
@@ -53,7 +59,7 @@ const formatRupiahInput = (value: string) => value.replace(/\D/g, '').replace(/\
 const parseRupiahInput = (value: string) => value.replace(/\./g, '')
 
 const savingsIcons = [
-  { label: 'Tabungan', value: 'tabler-piggy-bank' },
+  { label: 'Tabungan', value: 'tabler-coins' },
   { label: 'Dompet', value: 'tabler-wallet' },
   { label: 'Uang', value: 'tabler-cash' },
   { label: 'Koin', value: 'tabler-coin' },
@@ -150,19 +156,25 @@ type CategoryUnion = SavingsCategoryType | ExpenseCategoryType
 const MobileCategories = ({ kind }: Props) => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const dict = useTabunganDictionary()
 
   const isSavings = kind === 'savings'
   const iconSuggestions = isSavings ? savingsIcons : expenseIcons
   const apiPath = isSavings ? '/api/apps/tabungan/savings-categories' : '/api/apps/tabungan/expense-categories'
-  const pageTitle = isSavings ? 'Kategori Tabungan' : 'Kategori Pengeluaran'
-  const addLabel = isSavings ? 'Tambah Kategori Tabungan' : 'Tambah Kategori Pengeluaran'
-  const editLabel = isSavings ? 'Edit Kategori Tabungan' : 'Edit Kategori Pengeluaran'
-  const emptyMsg = isSavings ? 'Belum ada kategori tabungan' : 'Belum ada kategori pengeluaran'
-  const amountLabel = isSavings ? 'Target Tabungan (Rp)' : 'Budget Bulanan (Rp)'
+  const pageDict = isSavings ? dict.savingsCategoriesPage : dict.expenseCategoriesPage
+  const pageTitle = pageDict.title
+  const addLabel = pageDict.add
+  const editLabel = pageDict.edit
+  const emptyMsg = pageDict.empty
+  const amountLabel = isSavings ? dict.savingsCategoriesPage.target : dict.expenseCategoriesPage.budget
 
-  const [data, setData] = useState<CategoryUnion[]>([])
-  const [storageTypes, setStorageTypes] = useState<StorageTypeType[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: categoriesData, isLoading, mutate } = useTabunganData<CategoryUnion[]>(apiPath)
+  const { data: storageData } = useTabunganData<StorageTypeType[]>('/api/apps/tabungan/storage-types')
+
+  const data = Array.isArray(categoriesData) ? categoriesData : []
+  const storageTypes = Array.isArray(storageData) ? storageData : []
+  const loading = isLoading && data.length === 0
+
   const [openDialog, setOpenDialog] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [colorAnchor, setColorAnchor] = useState<HTMLElement | null>(null)
@@ -176,24 +188,10 @@ const MobileCategories = ({ kind }: Props) => {
     storageTypeId: ''
   })
 
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const [catRes, storageRes] = await Promise.all([fetch(apiPath), fetch('/api/apps/tabungan/storage-types')])
-      const [categories, storages] = await Promise.all([catRes.json(), storageRes.json()])
-      setData(Array.isArray(categories) ? categories : [])
-      setStorageTypes(Array.isArray(storages) ? storages : [])
-    } catch (error) {
-      console.error('Failed to fetch data:', error)
-    } finally {
-      setLoading(false)
-    }
+  const refresh = () => {
+    mutate().catch(() => {})
+    invalidateTabuganKeys(['/api/apps/tabungan/stats'])
   }
-
-  useEffect(() => {
-    fetchData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind])
 
   const totalAmount = useMemo(() => {
     return data.reduce((sum, c) => {
@@ -237,6 +235,7 @@ const MobileCategories = ({ kind }: Props) => {
     try {
       const method = editingId ? 'PUT' : 'POST'
       const amountKey = isSavings ? 'targetAmount' : 'budgetLimit'
+
       const submitData: Record<string, unknown> = {
         name: formData.name,
         description: formData.description,
@@ -257,27 +256,27 @@ const MobileCategories = ({ kind }: Props) => {
       if (!res.ok) throw new Error('Failed to save')
 
       handleCloseDialog()
-      fetchData()
-      showSuccessToast(editingId ? 'Kategori berhasil diperbarui' : 'Kategori berhasil ditambahkan')
+      refresh()
+      showSuccessToast(editingId ? pageDict.updateSuccess : pageDict.addSuccess)
     } catch (error) {
       console.error('Failed to save category:', error)
-      showErrorToast('Gagal menyimpan kategori')
+      showErrorToast(editingId ? pageDict.updateFail : pageDict.addFail)
     }
   }
 
   const handleDelete = async (id: string) => {
-    const confirmed = await showDeleteConfirm('Yakin ingin menghapus kategori ini?')
+    const confirmed = await showDeleteConfirm(pageDict.deleteConfirm)
 
     if (confirmed) {
       try {
         const res = await fetch(`${apiPath}?id=${id}`, { method: 'DELETE' })
 
         if (!res.ok) throw new Error('Failed to delete')
-        fetchData()
-        showSuccessToast('Kategori berhasil dihapus')
+        refresh()
+        showSuccessToast(pageDict.deleteSuccess)
       } catch (error) {
         console.error('Failed to delete category:', error)
-        showErrorToast('Gagal menghapus kategori')
+        showErrorToast(pageDict.deleteFail)
       }
     }
   }
@@ -315,7 +314,7 @@ const MobileCategories = ({ kind }: Props) => {
             }}
           >
             <i
-              className={isSavings ? 'tabler-pig-money' : 'tabler-shopping-cart'}
+              className={isSavings ? 'tabler-coin' : 'tabler-shopping-cart'}
               style={{ fontSize: 18, color: theme.palette.primary.main }}
             />
           </Box>
@@ -324,7 +323,7 @@ const MobileCategories = ({ kind }: Props) => {
           {formatCurrency(totalAmount)}
         </Typography>
         <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-          {data.length} kategori • {isSavings ? 'Total target' : 'Total budget bulanan'}
+          {data.length} • {isSavings ? dict.savingsCategoriesPage.target : dict.expenseCategoriesPage.budget}
         </Typography>
       </Box>
 
@@ -334,6 +333,7 @@ const MobileCategories = ({ kind }: Props) => {
           const amt = isSavings
             ? (category as SavingsCategoryType).targetAmount
             : (category as ExpenseCategoryType).budgetLimit
+
           const accent = category.color || theme.palette.primary.main
 
           return (
@@ -369,7 +369,7 @@ const MobileCategories = ({ kind }: Props) => {
                   }}
                 >
                   <i
-                    className={category.icon || (isSavings ? 'tabler-piggy-bank' : 'tabler-shopping-cart')}
+                    className={category.icon || (isSavings ? 'tabler-coin' : 'tabler-shopping-cart')}
                     style={{ fontSize: 22, color: accent }}
                   />
                 </Box>
@@ -424,7 +424,7 @@ const MobileCategories = ({ kind }: Props) => {
                     {amt ? formatCurrency(amt) : '—'}
                   </Typography>
                   <Typography variant='caption' sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
-                    {isSavings ? 'Target' : 'Budget/bulan'}
+                    {isSavings ? dict.savingsCategoriesPage.target : dict.expenseCategoriesPage.budget}
                   </Typography>
                 </Box>
                 <IconButton
@@ -469,7 +469,7 @@ const MobileCategories = ({ kind }: Props) => {
       {data.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
           <i
-            className={isSavings ? 'tabler-pig-money' : 'tabler-shopping-cart-off'}
+            className={isSavings ? 'tabler-coin' : 'tabler-shopping-cart-off'}
             style={{ fontSize: 64, opacity: 0.3 }}
           />
           <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>{emptyMsg}</Typography>
@@ -519,13 +519,13 @@ const MobileCategories = ({ kind }: Props) => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
             <TextField
               fullWidth
-              label='Nama Kategori'
+              label={pageDict.name}
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
             />
             <TextField
               fullWidth
-              label='Deskripsi (opsional)'
+              label={dict.fields.description}
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
             />
@@ -536,6 +536,7 @@ const MobileCategories = ({ kind }: Props) => {
               value={formData.icon}
               onChange={(_, newValue) => {
                 const value = typeof newValue === 'string' ? newValue : newValue?.value || ''
+
                 setFormData({ ...formData, icon: value })
               }}
               onInputChange={(_, newValue) => setFormData({ ...formData, icon: newValue })}
@@ -548,8 +549,8 @@ const MobileCategories = ({ kind }: Props) => {
               renderInput={params => (
                 <TextField
                   {...params}
-                  label='Icon'
-                  placeholder='Pilih atau ketik icon'
+                  label={pageDict.icon}
+                  placeholder={pageDict.icon}
                   InputProps={{
                     ...params.InputProps,
                     startAdornment: formData.icon ? (
@@ -564,7 +565,7 @@ const MobileCategories = ({ kind }: Props) => {
             />
             <TextField
               fullWidth
-              label='Warna'
+              label={pageDict.color}
               value={formData.color}
               onChange={e => setFormData({ ...formData, color: e.target.value })}
               placeholder='#f44336'
@@ -593,7 +594,7 @@ const MobileCategories = ({ kind }: Props) => {
             >
               <Box sx={{ p: 2, maxWidth: 280, maxHeight: 280, overflowY: 'auto' }}>
                 <Typography variant='caption' color='text.secondary' sx={{ mb: 1, display: 'block' }}>
-                  Pilih Warna
+                  {pageDict.color}
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 0.5 }}>
                   {colorPresets.map(color => (
@@ -631,11 +632,11 @@ const MobileCategories = ({ kind }: Props) => {
             <TextField
               select
               fullWidth
-              label='Jenis Simpan'
+              label={dict.fields.storage}
               value={formData.storageTypeId}
               onChange={e => setFormData({ ...formData, storageTypeId: e.target.value })}
             >
-              <MenuItem value=''>Pilih Jenis Simpan</MenuItem>
+              <MenuItem value=''>{dict.fields.storagePlaceholder}</MenuItem>
               {storageTypes.map(st => (
                 <MenuItem key={st.id} value={st.id}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -657,10 +658,10 @@ const MobileCategories = ({ kind }: Props) => {
           }}
         >
           <Button onClick={handleCloseDialog} color='secondary' variant='outlined' fullWidth>
-            Batal
+            {dict.common.cancel}
           </Button>
           <Button onClick={handleSubmit} variant='contained' fullWidth>
-            Simpan
+            {dict.common.save}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/libs/prisma'
+
+import { withPrisma } from '@/libs/prisma'
 
 // GET - Get most frequently used storage/category per transaction type
 // Returns the "default" selections based on user's past behavior
@@ -7,18 +8,20 @@ export async function GET() {
   try {
     // Get the most common fromStorageTypeId, toStorageTypeId, expenseCategoryId, savingsCategoryId
     // grouped by transaction type from the last 100 transactions
-    const recentTransactions = await prisma.transaction.findMany({
-      select: {
-        type: true,
-        fromStorageTypeId: true,
-        toStorageTypeId: true,
-        expenseCategoryId: true,
-        savingsCategoryId: true,
-        description: true
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 200
-    })
+    const recentTransactions = await withPrisma(prisma =>
+      prisma.transaction.findMany({
+        select: {
+          type: true,
+          fromStorageTypeId: true,
+          toStorageTypeId: true,
+          expenseCategoryId: true,
+          savingsCategoryId: true,
+          description: true
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 200
+      })
+    )
 
     // Count frequency per type
     const patterns: Record<string, {

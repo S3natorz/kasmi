@@ -19,10 +19,14 @@ import Typography from '@mui/material/Typography'
 import CustomTextField from '@core/components/mui/TextField'
 import VoiceTransactionButton from '@/components/VoiceTransactionButton'
 
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
 // Utils
 import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swal'
 import { fuzzyMatchName } from '@/utils/voiceTransactionParser'
 import type { ParsedTransaction } from '@/utils/voiceTransactionParser'
+import { wibDateKey, wibToday } from '@/libs/wib'
 
 // Types
 import type {
@@ -52,13 +56,14 @@ const parseRupiahInput = (value: string) => {
 }
 
 const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props) => {
+  const dict = useTabunganDictionary()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     type: 'income' as 'income' | 'expense' | 'savings' | 'transfer' | 'gold_income',
     amount: '',
     goldGrams: '',
     description: '',
-    date: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0],
+    date: wibToday(),
     familyMemberId: '',
     savingsCategoryId: '',
     expenseCategoryId: '',
@@ -106,7 +111,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
         amount: transaction.type === 'gold_income' ? '' : formatRupiahInput(transaction.amount.toString()),
         goldGrams: transaction.type === 'gold_income' ? transaction.amount.toString() : '',
         description: transaction.description || '',
-        date: new Date(transaction.date).toISOString().split('T')[0],
+        date: wibDateKey(transaction.date),
         familyMemberId: transaction.familyMemberId || '',
         savingsCategoryId: transaction.savingsCategoryId || '',
         expenseCategoryId: transaction.expenseCategoryId || '',
@@ -135,15 +140,15 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
       })
 
       if (response.ok) {
-        showSuccessToast('Transaksi berhasil diupdate!')
+        showSuccessToast(dict.dialogs.updateSuccess)
         onClose()
         onSuccess?.()
       } else {
-        showErrorToast('Gagal mengupdate transaksi')
+        showErrorToast(dict.dialogs.updateFail)
       }
     } catch (error) {
       console.error('Failed to update transaction:', error)
-      showErrorToast('Terjadi kesalahan')
+      showErrorToast(dict.dialogs.error)
     } finally {
       setLoading(false)
     }
@@ -152,7 +157,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
   const handleDelete = async () => {
     if (!transaction) return
 
-    const confirmed = await showDeleteConfirm('transaksi ini')
+    const confirmed = await showDeleteConfirm(dict.dialogs.deleteConfirmTarget)
     if (confirmed) {
       try {
         setLoading(true)
@@ -161,15 +166,15 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
         })
 
         if (response.ok) {
-          showSuccessToast('Transaksi berhasil dihapus!')
+          showSuccessToast(dict.dialogs.deleteSuccess)
           onClose()
           onSuccess?.()
         } else {
-          showErrorToast('Gagal menghapus transaksi')
+          showErrorToast(dict.dialogs.deleteFail)
         }
       } catch (error) {
         console.error('Failed to delete transaction:', error)
-        showErrorToast('Terjadi kesalahan')
+        showErrorToast(dict.dialogs.error)
       } finally {
         setLoading(false)
       }
@@ -223,7 +228,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
     >
       <DialogTitle className='flex items-center justify-between'>
         <div className='flex items-center gap-2'>
-          <span>Edit Transaksi</span>
+          <span>{dict.dialogs.editTitle}</span>
           <VoiceTransactionButton onParsed={handleVoiceParsed} />
         </div>
         <IconButton onClick={onClose} size='small'>
@@ -237,7 +242,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
             <CustomTextField
               select
               fullWidth
-              label='Tipe Transaksi'
+              label={dict.fields.type}
               value={formData.type}
               onChange={e =>
                 setFormData({
@@ -250,11 +255,11 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
                 })
               }
             >
-              <MenuItem value='income'>Pemasukan</MenuItem>
-              <MenuItem value='expense'>Pengeluaran</MenuItem>
-              <MenuItem value='savings'>Tabungan</MenuItem>
-              <MenuItem value='transfer'>Transfer</MenuItem>
-              <MenuItem value='gold_income'>Pemasukan Emas</MenuItem>
+              <MenuItem value='income'>{dict.types.income}</MenuItem>
+              <MenuItem value='expense'>{dict.types.expense}</MenuItem>
+              <MenuItem value='savings'>{dict.types.savings}</MenuItem>
+              <MenuItem value='transfer'>{dict.types.transfer}</MenuItem>
+              <MenuItem value='gold_income'>{dict.types.incomeGold}</MenuItem>
             </CustomTextField>
           </Grid>
 
@@ -263,13 +268,13 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
             <Grid size={{ xs: 12 }}>
               <CustomTextField
                 fullWidth
-                label='Berat Emas (gram)'
+                label={dict.fields.grams}
                 value={formData.goldGrams}
                 onChange={e => {
                   const val = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.')
                   setFormData({ ...formData, goldGrams: val })
                 }}
-                placeholder='0.00'
+                placeholder={dict.fields.gramsPlaceholder}
                 slotProps={{
                   input: {
                     endAdornment: <span className='ml-1 text-sm'>gram</span>
@@ -281,10 +286,10 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
             <Grid size={{ xs: 12 }}>
               <CustomTextField
                 fullWidth
-                label='Jumlah (Rp)'
+                label={dict.fields.amount}
                 value={formData.amount}
                 onChange={e => setFormData({ ...formData, amount: formatRupiahInput(e.target.value) })}
-                placeholder='0'
+                placeholder={dict.fields.amountPlaceholder}
                 slotProps={{
                   input: {
                     startAdornment: <span className='mr-1'>Rp</span>
@@ -298,10 +303,10 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
           <Grid size={{ xs: 12 }}>
             <CustomTextField
               fullWidth
-              label='Keterangan'
+              label={dict.fields.description}
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
-              placeholder='Contoh: Gaji bulanan'
+              placeholder={dict.fields.descriptionPlaceholder}
             />
           </Grid>
 
@@ -310,7 +315,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
             <CustomTextField
               fullWidth
               type='date'
-              label='Tanggal'
+              label={dict.fields.date}
               value={formData.date}
               onChange={e => setFormData({ ...formData, date: e.target.value })}
               slotProps={{ inputLabel: { shrink: true } }}
@@ -322,11 +327,11 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
             <CustomTextField
               select
               fullWidth
-              label='Anggota Keluarga'
+              label={dict.fields.member}
               value={formData.familyMemberId}
               onChange={e => setFormData({ ...formData, familyMemberId: e.target.value })}
             >
-              <MenuItem value=''>-- Pilih Anggota --</MenuItem>
+              <MenuItem value=''>{dict.fields.memberPlaceholder}</MenuItem>
               {familyMembers.map(member => (
                 <MenuItem key={member.id} value={member.id}>
                   {member.name}
@@ -342,13 +347,13 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
                 select
                 fullWidth
                 required
-                label='Masuk ke Simpanan'
+                label={dict.fields.toStorage}
                 value={formData.toStorageTypeId}
                 onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
                 error={!formData.toStorageTypeId}
-                helperText={!formData.toStorageTypeId ? 'Pilih simpanan tujuan' : ''}
+                helperText={!formData.toStorageTypeId ? dict.fields.storagePlaceholder : ''}
               >
-                <MenuItem value=''>-- Pilih Simpanan --</MenuItem>
+                <MenuItem value=''>{dict.fields.storagePlaceholder}</MenuItem>
                 {storageTypes
                   .filter(s => !s.isGold)
                   .map(storage => (
@@ -367,13 +372,13 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
                 select
                 fullWidth
                 required
-                label='Masuk ke Simpanan Emas'
+                label={dict.fields.toStorage}
                 value={formData.toStorageTypeId}
                 onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
                 error={!formData.toStorageTypeId}
-                helperText={!formData.toStorageTypeId ? 'Pilih simpanan emas tujuan' : ''}
+                helperText={!formData.toStorageTypeId ? dict.fields.storagePlaceholder : ''}
               >
-                <MenuItem value=''>-- Pilih Simpanan Emas --</MenuItem>
+                <MenuItem value=''>{dict.fields.storagePlaceholder}</MenuItem>
                 {storageTypes
                   .filter(s => s.isGold)
                   .map(storage => (
@@ -392,13 +397,13 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
                 select
                 fullWidth
                 required
-                label='Ambil dari Simpanan'
+                label={dict.fields.fromStorage}
                 value={formData.fromStorageTypeId}
                 onChange={e => setFormData({ ...formData, fromStorageTypeId: e.target.value })}
                 error={!formData.fromStorageTypeId}
-                helperText={!formData.fromStorageTypeId ? 'Pilih simpanan sumber' : ''}
+                helperText={!formData.fromStorageTypeId ? dict.fields.storagePlaceholder : ''}
               >
-                <MenuItem value=''>-- Pilih Simpanan --</MenuItem>
+                <MenuItem value=''>{dict.fields.storagePlaceholder}</MenuItem>
                 {storageTypes
                   .filter(s => !s.isGold)
                   .map(storage => (
@@ -418,12 +423,12 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
                   select
                   fullWidth
                   required
-                  label='Dari Simpanan'
+                  label={dict.fields.fromStorage}
                   value={formData.fromStorageTypeId}
                   onChange={e => setFormData({ ...formData, fromStorageTypeId: e.target.value })}
                   error={!formData.fromStorageTypeId}
                 >
-                  <MenuItem value=''>-- Pilih --</MenuItem>
+                  <MenuItem value=''>{dict.fields.storagePlaceholder}</MenuItem>
                   {storageTypes
                     .filter(s => !s.isGold)
                     .map(storage => (
@@ -438,12 +443,12 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
                   select
                   fullWidth
                   required
-                  label='Ke Simpanan'
+                  label={dict.fields.toStorage}
                   value={formData.toStorageTypeId}
                   onChange={e => setFormData({ ...formData, toStorageTypeId: e.target.value })}
                   error={!formData.toStorageTypeId}
                 >
-                  <MenuItem value=''>-- Pilih --</MenuItem>
+                  <MenuItem value=''>{dict.fields.storagePlaceholder}</MenuItem>
                   {storageTypes
                     .filter(s => s.id !== formData.fromStorageTypeId && !s.isGold)
                     .map(storage => (
@@ -462,11 +467,11 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
               <CustomTextField
                 select
                 fullWidth
-                label='Kategori Tabungan'
+                label={dict.fields.savingsCategory}
                 value={formData.savingsCategoryId}
                 onChange={e => setFormData({ ...formData, savingsCategoryId: e.target.value })}
               >
-                <MenuItem value=''>-- Pilih Kategori --</MenuItem>
+                <MenuItem value=''>{dict.fields.categoryPlaceholder}</MenuItem>
                 {savingsCategories.map(cat => (
                   <MenuItem key={cat.id} value={cat.id}>
                     {cat.name}
@@ -483,13 +488,13 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
                 select
                 fullWidth
                 required
-                label='Kategori Pengeluaran'
+                label={dict.fields.expenseCategory}
                 value={formData.expenseCategoryId}
                 onChange={e => setFormData({ ...formData, expenseCategoryId: e.target.value })}
                 error={!formData.expenseCategoryId}
-                helperText={!formData.expenseCategoryId ? 'Pilih kategori pengeluaran' : ''}
+                helperText={!formData.expenseCategoryId ? dict.fields.categoryPlaceholder : ''}
               >
-                <MenuItem value=''>-- Pilih Kategori --</MenuItem>
+                <MenuItem value=''>{dict.fields.categoryPlaceholder}</MenuItem>
                 {expenseCategories.map(cat => (
                   <MenuItem key={cat.id} value={cat.id}>
                     {cat.name}
@@ -508,11 +513,11 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
           disabled={loading}
           startIcon={<i className='tabler-trash' />}
         >
-          Hapus
+          {dict.dialogs.delete}
         </Button>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button variant='outlined' color='secondary' onClick={onClose}>
-            Batal
+            {dict.dialogs.cancel}
           </Button>
           <Button
             variant='contained'
@@ -527,7 +532,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
               (formData.type === 'transfer' && (!formData.fromStorageTypeId || !formData.toStorageTypeId))
             }
           >
-            {loading ? 'Menyimpan...' : 'Simpan'}
+            {loading ? dict.dialogs.submitting : dict.dialogs.save}
           </Button>
         </Box>
       </DialogActions>

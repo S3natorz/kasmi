@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 // MUI Imports
 import Box from '@mui/material/Box'
@@ -13,28 +13,38 @@ import IconButton from '@mui/material/IconButton'
 import { useTheme } from '@mui/material/styles'
 
 // Component Imports
+import Skeleton from '@mui/material/Skeleton'
+
 import EditTransactionDialog from '@/components/dialogs/EditTransactionDialog'
 import { TransactionRowSkeleton } from './MobileSkeletons'
-import Skeleton from '@mui/material/Skeleton'
+
+// Hooks
+import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
+
+// Contexts
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
+// Utils
+import { formatWibDateKey, isWibToday, isWibYesterday, wibDateKey } from '@/libs/wib'
 
 // Types
 import type { TransactionType } from '@/types/apps/tabunganTypes'
 
 type FilterType = 'all' | 'income' | 'expense' | 'savings' | 'transfer'
 
-const filters: { key: FilterType; label: string; icon: string }[] = [
-  { key: 'all', label: 'Semua', icon: 'tabler-list' },
-  { key: 'income', label: 'Masuk', icon: 'tabler-arrow-down-left' },
-  { key: 'expense', label: 'Keluar', icon: 'tabler-arrow-up-right' },
-  { key: 'savings', label: 'Tabungan', icon: 'tabler-pig-money' },
-  { key: 'transfer', label: 'Transfer', icon: 'tabler-transfer' }
-]
+const filterIcons: Record<FilterType, string> = {
+  all: 'tabler-list',
+  income: 'tabler-arrow-down-left',
+  expense: 'tabler-arrow-up-right',
+  savings: 'tabler-coin',
+  transfer: 'tabler-transfer'
+}
 
 const typeConfig: Record<string, { icon: string; color: string; bg: string; sign: string }> = {
   income: { icon: 'tabler-arrow-down-left', color: '#28C76F', bg: 'rgba(40, 199, 111, 0.12)', sign: '+' },
   gold_income: { icon: 'tabler-coin', color: '#FFB300', bg: 'rgba(255, 179, 0, 0.12)', sign: '+' },
   expense: { icon: 'tabler-arrow-up-right', color: '#FF4C51', bg: 'rgba(255, 76, 81, 0.12)', sign: '-' },
-  savings: { icon: 'tabler-pig-money', color: '#00BAD1', bg: 'rgba(0, 186, 209, 0.12)', sign: '↗' },
+  savings: { icon: 'tabler-coin', color: '#00BAD1', bg: 'rgba(0, 186, 209, 0.12)', sign: '↗' },
   transfer: { icon: 'tabler-transfer', color: '#FF9F43', bg: 'rgba(255, 159, 67, 0.12)', sign: '↔' }
 }
 
@@ -48,9 +58,9 @@ const formatCurrency = (amount: number) => {
 
 const groupByDate = (txs: TransactionType[]) => {
   const groups: Record<string, TransactionType[]> = {}
+
   txs.forEach(tx => {
-    const d = new Date(tx.date)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const key = wibDateKey(tx.date)
 
     if (!groups[key]) groups[key] = []
     groups[key].push(tx)
@@ -59,26 +69,38 @@ const groupByDate = (txs: TransactionType[]) => {
   return groups
 }
 
-const formatGroupHeader = (key: string) => {
-  const d = new Date(key)
-  const today = new Date()
-  const yesterday = new Date()
-  yesterday.setDate(today.getDate() - 1)
-
-  if (d.toDateString() === today.toDateString()) return 'Hari Ini'
-  if (d.toDateString() === yesterday.toDateString()) return 'Kemarin'
-
-  return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-}
-
 const MobileTransactions = () => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const dict = useTabunganDictionary()
 
-  const [data, setData] = useState<TransactionType[]>([])
-  const [loading, setLoading] = useState(true)
+  const filters: { key: FilterType; label: string; icon: string }[] = [
+    { key: 'all', label: dict.filters.all, icon: filterIcons.all },
+    { key: 'income', label: dict.filters.income, icon: filterIcons.income },
+    { key: 'expense', label: dict.filters.expense, icon: filterIcons.expense },
+    { key: 'savings', label: dict.filters.savings, icon: filterIcons.savings },
+    { key: 'transfer', label: dict.filters.transfer, icon: filterIcons.transfer }
+  ]
+
+  const formatGroupHeader = (key: string) => {
+    if (isWibToday(key)) return dict.dates.today
+    if (isWibYesterday(key)) return dict.dates.yesterday
+
+    return formatWibDateKey(key, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  }
+
+  // Request the full history view; the GET route defaults to 200 rows now
+  // so full-list pages have to opt into a larger page explicitly.
+  const { data: txData, isLoading, mutate } = useTabunganData<TransactionType[]>(
+    '/api/apps/tabungan/transactions?limit=1000'
+  )
+
+  const data = Array.isArray(txData) ? txData : []
+  const loading = isLoading && data.length === 0
+
   const [filter, setFilter] = useState<FilterType>('all')
   const [search, setSearch] = useState('')
+
   const [hideBalance, setHideBalance] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('hideBalances') === 'true'
@@ -90,33 +112,24 @@ const MobileTransactions = () => {
   const [editOpen, setEditOpen] = useState(false)
   const [selectedTx, setSelectedTx] = useState<TransactionType | null>(null)
 
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const res = await fetch('/api/apps/tabungan/transactions')
-      const json = await res.json()
-      setData(Array.isArray(json) ? json : [])
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
+  const refresh = () => {
+    mutate().catch(() => {})
+    invalidateTabuganKeys(['/api/apps/tabungan/stats', '/api/apps/tabungan/storage-types'])
   }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   const filtered = useMemo(() => {
     let list = data
+
     if (filter !== 'all') {
       list =
         filter === 'income'
           ? list.filter(t => t.type === 'income' || t.type === 'gold_income')
           : list.filter(t => t.type === filter)
     }
+
     if (search.trim()) {
       const q = search.toLowerCase()
+
       list = list.filter(
         t =>
           t.description?.toLowerCase().includes(q) ||
@@ -161,7 +174,7 @@ const MobileTransactions = () => {
         >
           <i className='tabler-search' style={{ fontSize: 18, color: isDark ? '#aaa' : '#666' }} />
           <InputBase
-            placeholder='Cari transaksi...'
+            placeholder={dict.transactionsList.searchPlaceholder}
             value={search}
             onChange={e => setSearch(e.target.value)}
             sx={{ flex: 1, fontSize: '0.9rem' }}
@@ -184,11 +197,11 @@ const MobileTransactions = () => {
           }}
         >
           <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-            {filtered.length} transaksi
+            {filtered.length} {dict.transactionsList.count}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <Typography variant='caption' sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
-              Net:
+              {dict.transactionsList.net}
             </Typography>
             <Typography
               variant='caption'
@@ -269,9 +282,9 @@ const MobileTransactions = () => {
       ) : filtered.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
           <i className='tabler-inbox' style={{ fontSize: 64, opacity: 0.3 }} />
-          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>Tidak ada transaksi</Typography>
+          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>{dict.transactionsList.empty}</Typography>
           <Typography variant='caption' sx={{ fontSize: '0.75rem', opacity: 0.7 }}>
-            Tap tombol + untuk menambah
+            {dict.transactionsList.emptyHint}
           </Typography>
         </Box>
       ) : (
@@ -428,7 +441,7 @@ const MobileTransactions = () => {
         transaction={selectedTx}
         onSuccess={() => {
           setEditOpen(false)
-          fetchData()
+          refresh()
         }}
       />
     </Box>

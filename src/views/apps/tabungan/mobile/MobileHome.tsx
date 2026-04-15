@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 
 // Next Imports
 import { useRouter, useParams } from 'next/navigation'
@@ -29,6 +29,23 @@ import EditTransactionDialog from '@/components/dialogs/EditTransactionDialog'
 import TransactionsByTypeDialog from '@/components/dialogs/TransactionsByTypeDialog'
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
 import { MobileHomeSkeleton } from './MobileSkeletons'
+
+// Hooks
+import { useTabunganData, invalidateTabuganKeys } from '@/hooks/useTabunganData'
+
+// Context Imports
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
+
+// Utils
+import {
+  formatWibDate,
+  getWibDayOfWeek,
+  wibDateAtNoon,
+  wibDateKey,
+  wibMonthRange,
+  wibThisMonth,
+  wibToday
+} from '@/libs/wib'
 
 // Types
 import type { StorageTypeType, TransactionType } from '@/types/apps/tabunganTypes'
@@ -60,56 +77,38 @@ type StatsData = {
   transactionCount: number
 }
 
-const formatDateForApi = (date: Date) => {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-
-  return `${y}-${m}-${d}`
-}
-
+// Date math lives in WIB so the stats filter agrees with what the API
+// interprets — otherwise a browser outside WIB silently shifts "today"
+// by a day against the server's window.
 const getDateRange = (filterType: FilterType, selectedMonth: string) => {
-  const now = new Date()
+  const today = wibToday()
 
   if (filterType === 'monthly') {
-    const [year, month] = selectedMonth.split('-').map(Number)
-    const start = new Date(year, month - 1, 1)
-    const end = new Date(year, month, 0)
-
-    return { startDate: formatDateForApi(start), endDate: formatDateForApi(end) }
+    return wibMonthRange(selectedMonth)
   }
+
   if (filterType === 'weekly') {
-    const dayOfWeek = now.getDay()
-    const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - dayOfWeek)
-    const endOfWeek = new Date(startOfWeek)
-    endOfWeek.setDate(startOfWeek.getDate() + 6)
+    const anchor = wibDateAtNoon(today)
+    const dayOfWeek = getWibDayOfWeek(anchor)
+    const startOfWeek = new Date(anchor.getTime() - dayOfWeek * 24 * 60 * 60 * 1000)
+    const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000)
 
-    return { startDate: formatDateForApi(startOfWeek), endDate: formatDateForApi(endOfWeek) }
-  }
-  if (filterType === 'daily') {
-    return { startDate: formatDateForApi(now), endDate: formatDateForApi(now) }
+    return { startDate: wibDateKey(startOfWeek), endDate: wibDateKey(endOfWeek) }
   }
 
-  return { startDate: formatDateForApi(now), endDate: formatDateForApi(now) }
+  return { startDate: today, endDate: today }
 }
 
 const MobileHome = () => {
   const router = useRouter()
   const params = useParams()
-  const lang = (params?.lang as string) || 'en'
-
-  const [stats, setStats] = useState<StatsData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [goldPrice, setGoldPrice] = useState(0)
+  const dict = useTabunganDictionary()
+  const lang = (params?.lang as string) || 'id'
 
   // Period filter
   const [filterType, setFilterType] = useState<FilterType>('monthly')
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date()
 
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  })
+  const [selectedMonth, setSelectedMonth] = useState(() => wibThisMonth())
 
   // Hide balance toggle
   const [hideBalance, setHideBalance] = useState<boolean>(() => {
@@ -123,6 +122,7 @@ const MobileHome = () => {
   const toggleHideBalance = () => {
     setHideBalance(prev => {
       const next = !prev
+
       localStorage.setItem('hideBalances', String(next))
 
       return next
@@ -146,46 +146,52 @@ const MobileHome = () => {
 
   const dateRange = useMemo(() => getDateRange(filterType, selectedMonth), [filterType, selectedMonth])
 
-  const fetchStats = async () => {
-    try {
-      setLoading(true)
-      const { startDate, endDate } = dateRange
-      const [statsRes, storageRes] = await Promise.all([
-        fetch(`/api/apps/tabungan/stats?startDate=${startDate}&endDate=${endDate}`),
-        fetch('/api/apps/tabungan/storage-types')
-      ])
-      const [data, storages] = await Promise.all([statsRes.json(), storageRes.json()])
-      setStats({
-        totalIncome: data.totalIncome || 0,
-        totalExpenses: data.totalExpenses || 0,
-        totalSavings: data.totalSavings || 0,
-        storageBalances: Array.isArray(storages) ? storages : [],
-        savingsByCategory: data.savingsByCategory || [],
-        expensesByCategory: data.expensesByCategory || [],
-        recentTransactions: data.recentTransactions || [],
-        transactionCount: data.transactionCount || 0
-      })
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const statsUrl = `/api/apps/tabungan/stats?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
 
-  const fetchGoldPrice = async () => {
-    try {
-      const res = await fetch('/api/apps/tabungan/gold-price')
-      const data = await res.json()
-      setGoldPrice(data.pricePerGram || 0)
-    } catch (error) {
-      console.error('Failed to fetch gold price:', error)
-    }
-  }
+  const { data: statsPayload, isLoading: statsLoading, mutate: mutateStats } = useTabunganData<{
+    totalIncome?: number
+    totalExpenses?: number
+    totalSavings?: number
+    savingsByCategory?: StatsData['savingsByCategory']
+    expensesByCategory?: StatsData['expensesByCategory']
+    recentTransactions?: TransactionType[]
+    transactionCount?: number
+  }>(statsUrl)
 
-  useEffect(() => {
-    fetchStats()
-    fetchGoldPrice()
-  }, [dateRange])
+  const { data: storagesPayload, isLoading: storagesLoading, mutate: mutateStorages } = useTabunganData<StorageTypeType[]>(
+    '/api/apps/tabungan/storage-types'
+  )
+
+  const { data: goldPayload, mutate: mutateGold } = useTabunganData<{ pricePerGram?: number }>(
+    '/api/apps/tabungan/gold-price',
+    { staleTime: 5 * 60_000 }
+  )
+
+  const goldPrice = goldPayload?.pricePerGram || 0
+
+  const stats = useMemo<StatsData | null>(() => {
+    if (!statsPayload && !storagesPayload) return null
+
+    return {
+      totalIncome: statsPayload?.totalIncome || 0,
+      totalExpenses: statsPayload?.totalExpenses || 0,
+      totalSavings: statsPayload?.totalSavings || 0,
+      storageBalances: Array.isArray(storagesPayload) ? storagesPayload : [],
+      savingsByCategory: statsPayload?.savingsByCategory || [],
+      expensesByCategory: statsPayload?.expensesByCategory || [],
+      recentTransactions: statsPayload?.recentTransactions || [],
+      transactionCount: statsPayload?.transactionCount || 0
+    }
+  }, [statsPayload, storagesPayload])
+
+  const loading = (statsLoading || storagesLoading) && !stats
+
+  const refetchAll = () => {
+    mutateStats().catch(() => {})
+    mutateStorages().catch(() => {})
+    mutateGold().catch(() => {})
+    invalidateTabuganKeys(['/api/apps/tabungan/transactions'])
+  }
 
   // Compute total balance
   const totalBalance = useMemo(() => {
@@ -202,14 +208,17 @@ const MobileHome = () => {
   const periodLabel = useMemo(() => {
     if (filterType === 'monthly') {
       const [y, m] = selectedMonth.split('-')
+      // Anchor at noon UTC on day 15 → safely inside the intended month for WIB formatting.
+      const anchor = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, 15, 5, 0, 0))
 
-      return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+      return formatWibDate(anchor, { month: 'long', year: 'numeric' })
     }
-    if (filterType === 'weekly') return 'Minggu Ini'
-    if (filterType === 'daily') return 'Hari Ini'
 
-    return 'Periode Ini'
-  }, [filterType, selectedMonth])
+    if (filterType === 'weekly') return dict.home.periodLabels.weekly
+    if (filterType === 'daily') return dict.home.periodLabels.daily
+
+    return dict.home.periodLabels.monthly
+  }, [filterType, selectedMonth, dict])
 
   // Handlers
   const handleQuickAction = (type: string) => {
@@ -236,12 +245,15 @@ const MobileHome = () => {
 
   const getMonthOptions = () => {
     const options = []
-    const now = new Date()
+    const [yearStr, monthStr] = wibThisMonth().split('-')
+    const year = Number(yearStr)
+    const month = Number(monthStr)
 
     for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      const label = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+      const anchor = new Date(Date.UTC(year, month - 1 - i, 15, 5, 0, 0))
+      const value = formatWibDate(anchor, { year: 'numeric', month: '2-digit' }, 'sv-SE')
+      const label = formatWibDate(anchor, { month: 'long', year: 'numeric' })
+
       options.push({ value, label })
     }
 
@@ -251,14 +263,14 @@ const MobileHome = () => {
   return (
     <>
       <TopBar
-        title='Kasmi'
+        title={dict.home.title}
         subtitle={periodLabel}
         rightAction={
           <>
             <IconButton size='small' onClick={e => setPeriodMenuAnchor(e.currentTarget)}>
               <i className='tabler-calendar-event' style={{ fontSize: 22 }} />
             </IconButton>
-            <IconButton size='small' onClick={fetchStats}>
+            <IconButton size='small' onClick={refetchAll}>
               <i className='tabler-refresh' style={{ fontSize: 22 }} />
             </IconButton>
           </>
@@ -281,7 +293,7 @@ const MobileHome = () => {
           <ListItemIcon>
             <i className='tabler-calendar-today' style={{ fontSize: 18 }} />
           </ListItemIcon>
-          <ListItemText primary='Hari Ini' />
+          <ListItemText primary={dict.home.periodLabels.daily} />
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -293,14 +305,14 @@ const MobileHome = () => {
           <ListItemIcon>
             <i className='tabler-calendar-week' style={{ fontSize: 18 }} />
           </ListItemIcon>
-          <ListItemText primary='Minggu Ini' />
+          <ListItemText primary={dict.home.periodLabels.weekly} />
         </MenuItem>
         <Divider />
         <Typography
           variant='caption'
           sx={{ px: 2, py: 0.5, color: 'text.secondary', fontWeight: 600, display: 'block' }}
         >
-          Pilih Bulan
+          {dict.home.pickMonth}
         </Typography>
         {getMonthOptions().map(opt => (
           <MenuItem
@@ -367,7 +379,7 @@ const MobileHome = () => {
         onClose={() => setQuickAddOpen(false)}
         onSuccess={() => {
           setQuickAddOpen(false)
-          fetchStats()
+          refetchAll()
         }}
         initialVoiceData={quickType ? { type: quickType } : null}
       />
@@ -398,7 +410,7 @@ const MobileHome = () => {
         transaction={selectedTransaction}
         onSuccess={() => {
           setEditDialogOpen(false)
-          fetchStats()
+          refetchAll()
         }}
       />
     </>

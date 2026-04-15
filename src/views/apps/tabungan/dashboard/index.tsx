@@ -38,6 +38,18 @@ import type { TransactionFilterType } from '@/components/dialogs/TransactionsByT
 import type { ThemeColor } from '@core/types'
 import type { StorageTypeType, TransactionType } from '@/types/apps/tabunganTypes'
 
+// Utils
+import {
+  formatWibDate,
+  formatWibDateKey,
+  getWibDayOfWeek,
+  wibDateAtNoon,
+  wibMonthRange,
+  wibToday,
+  wibThisMonth,
+  wibDateKey
+} from '@/libs/wib'
+
 type FilterType = 'daily' | 'weekly' | 'monthly' | 'custom'
 
 type StatsData = {
@@ -71,59 +83,36 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-// Helper to format date for API (use local date components, not UTC)
-const formatDateForApi = (date: Date) => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
-
-// Helper to get date range based on filter type
+// Helper to get date range based on filter type. All date math happens
+// in WIB (Asia/Jakarta) so the stats filter is consistent with how the
+// API interprets range boundaries.
 const getDateRange = (filterType: FilterType, selectedDate: string, customStart?: string, customEnd?: string) => {
-  const now = new Date()
+  const today = wibToday()
 
   switch (filterType) {
     case 'daily': {
-      const date = selectedDate ? new Date(selectedDate) : now
-      return {
-        startDate: formatDateForApi(date),
-        endDate: formatDateForApi(date)
-      }
+      const date = selectedDate || today
+      return { startDate: date, endDate: date }
     }
     case 'weekly': {
-      const date = selectedDate ? new Date(selectedDate) : now
-      const dayOfWeek = date.getDay()
-      const startOfWeek = new Date(date)
-      startOfWeek.setDate(date.getDate() - dayOfWeek)
-      const endOfWeek = new Date(startOfWeek)
-      endOfWeek.setDate(startOfWeek.getDate() + 6)
-      return {
-        startDate: formatDateForApi(startOfWeek),
-        endDate: formatDateForApi(endOfWeek)
-      }
+      // Anchor at noon WIB to make day-of-week arithmetic tz-stable.
+      const anchor = wibDateAtNoon(selectedDate || today)
+      const dayOfWeek = getWibDayOfWeek(anchor)
+      const startOfWeek = new Date(anchor.getTime() - dayOfWeek * 24 * 60 * 60 * 1000)
+      const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000)
+      return { startDate: wibDateKey(startOfWeek), endDate: wibDateKey(endOfWeek) }
     }
     case 'monthly': {
-      const [year, month] = selectedDate.split('-').map(Number)
-      const startOfMonth = new Date(year, month - 1, 1)
-      const endOfMonth = new Date(year, month, 0)
-      return {
-        startDate: formatDateForApi(startOfMonth),
-        endDate: formatDateForApi(endOfMonth)
-      }
+      return wibMonthRange(selectedDate)
     }
     case 'custom': {
       return {
-        startDate: customStart || formatDateForApi(now),
-        endDate: customEnd || formatDateForApi(now)
+        startDate: customStart || today,
+        endDate: customEnd || today
       }
     }
     default:
-      return {
-        startDate: formatDateForApi(now),
-        endDate: formatDateForApi(now)
-      }
+      return { startDate: today, endDate: today }
   }
 }
 
@@ -188,13 +177,10 @@ const TabunganDashboard = () => {
 
   // Filter states
   const [filterType, setFilterType] = useState<FilterType>('monthly')
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  })
-  const [selectedDate, setSelectedDate] = useState(() => formatDateForApi(new Date()))
-  const [customStartDate, setCustomStartDate] = useState(() => formatDateForApi(new Date()))
-  const [customEndDate, setCustomEndDate] = useState(() => formatDateForApi(new Date()))
+  const [selectedMonth, setSelectedMonth] = useState(() => wibThisMonth())
+  const [selectedDate, setSelectedDate] = useState(() => wibToday())
+  const [customStartDate, setCustomStartDate] = useState(() => wibToday())
+  const [customEndDate, setCustomEndDate] = useState(() => wibToday())
 
   // Get current date range based on filter
   const dateRange = useMemo(() => {
@@ -263,11 +249,14 @@ const TabunganDashboard = () => {
 
   const getMonthOptions = () => {
     const options = []
-    const now = new Date()
+    const [yearStr, monthStr] = wibThisMonth().split('-')
+    const year = Number(yearStr)
+    const month = Number(monthStr)
     for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      const label = date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+      // Normalize month indexing: use 0-based in the Date ctor then format in WIB.
+      const anchor = new Date(Date.UTC(year, month - 1 - i, 15, 5, 0, 0))
+      const value = formatWibDate(anchor, { year: 'numeric', month: '2-digit' }, 'sv-SE')
+      const label = formatWibDate(anchor, { month: 'long', year: 'numeric' })
       options.push({ value, label })
     }
     return options
@@ -277,24 +266,22 @@ const TabunganDashboard = () => {
   const getFilterLabel = () => {
     switch (filterType) {
       case 'daily':
-        return new Date(selectedDate).toLocaleDateString('id-ID', {
+        return formatWibDateKey(selectedDate, {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
           year: 'numeric'
         })
       case 'weekly':
-        const weekStart = new Date(dateRange.startDate)
-        const weekEnd = new Date(dateRange.endDate)
-        return `${weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`
-      case 'monthly':
+        return `${formatWibDateKey(dateRange.startDate, { day: 'numeric', month: 'short' })} - ${formatWibDateKey(dateRange.endDate, { day: 'numeric', month: 'short', year: 'numeric' })}`
+      case 'monthly': {
         const [year, month] = selectedMonth.split('-')
-        return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', {
-          month: 'long',
-          year: 'numeric'
-        })
+        // Noon on day 15 of the month — safe against DST / tz edge cases when formatted in WIB.
+        const anchor = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, 15, 5, 0, 0))
+        return formatWibDate(anchor, { month: 'long', year: 'numeric' })
+      }
       case 'custom':
-        return `${new Date(customStartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${new Date(customEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`
+        return `${formatWibDateKey(customStartDate, { day: 'numeric', month: 'short' })} - ${formatWibDateKey(customEndDate, { day: 'numeric', month: 'short', year: 'numeric' })}`
       default:
         return ''
     }
@@ -1053,7 +1040,7 @@ const TabunganDashboard = () => {
                             className='truncate'
                             sx={{ fontSize: '0.8rem' }}
                           >
-                            {new Date(transaction.date).toLocaleDateString('id-ID')}
+                            {formatWibDate(transaction.date, { day: 'numeric', month: 'numeric', year: 'numeric' })}
                             {transaction.familyMember && ` • ${transaction.familyMember.name}`}
                           </Typography>
                         </div>

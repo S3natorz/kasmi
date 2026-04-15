@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/libs/prisma'
+
+import { withPrisma } from '@/libs/prisma'
 
 // GET - Export all data as JSON
 export async function GET() {
   try {
-    const [familyMembers, savingsCategories, expenseCategories, storageTypes, transactions] = await Promise.all([
-      prisma.familyMember.findMany({ orderBy: { createdAt: 'asc' } }),
-      prisma.savingsCategory.findMany({ orderBy: { createdAt: 'asc' } }),
-      prisma.expenseCategory.findMany({ orderBy: { createdAt: 'asc' } }),
-      prisma.storageType.findMany({ orderBy: { createdAt: 'asc' } }),
-      prisma.transaction.findMany({ orderBy: { createdAt: 'asc' } })
-    ])
+    const [familyMembers, savingsCategories, expenseCategories, storageTypes, transactions] = await withPrisma(prisma =>
+      Promise.all([
+        prisma.familyMember.findMany({ orderBy: { createdAt: 'asc' } }),
+        prisma.savingsCategory.findMany({ orderBy: { createdAt: 'asc' } }),
+        prisma.expenseCategory.findMany({ orderBy: { createdAt: 'asc' } }),
+        prisma.storageType.findMany({ orderBy: { createdAt: 'asc' } }),
+        prisma.transaction.findMany({ orderBy: { createdAt: 'asc' } })
+      ])
+    )
 
     const backup = {
       version: 1,

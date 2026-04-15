@@ -110,7 +110,6 @@ const iconSuggestions = [
 
   // Lainnya
   { label: 'Brankas', value: 'tabler-safe' },
-  { label: 'Celengan', value: 'tabler-piggy-bank' },
   { label: 'Tabungan', value: 'tabler-moneybag' }
 ]
 
@@ -203,8 +202,10 @@ const StorageTypesTable = () => {
     if (item) {
       setEditingItem(item)
 
-      // Show the opening (initial) balance so that editing the "Saldo Awal"
-      // field changes the opening balance, not the current balance.
+      // Pre-fill "Saldo Awal" from initialBalance (falls back to the
+      // current balance for pre-migration rows). Editing this field is
+      // an opening-balance edit; the API shifts the current balance by
+      // the same delta to keep invariant.
       const openingBalance = item.initialBalance ?? item.balance ?? 0
       const openingGold = item.initialGoldWeight ?? item.goldWeight ?? null
 
@@ -317,8 +318,8 @@ const StorageTypesTable = () => {
 
       if (!response.ok) {
         showErrorToast('Gagal menghitung ulang saldo')
-        
-return
+
+        return
       }
 
       const data = await response.json()
@@ -334,7 +335,7 @@ return
           .map(
             (s: any) =>
               `• <b>${s.name}</b>: ${formatCurrency(s.previousBalance)} → ${formatCurrency(s.newBalance)}${
-                s.isGold ? ` (${s.previousGoldWeight?.toFixed(2) || 0}g → ${s.newGoldWeight?.toFixed(2) || 0}g)` : ''
+                s.isGold ? ` (${(s.previousGoldWeight || 0).toFixed(2)}g → ${(s.newGoldWeight || 0).toFixed(2)}g)` : ''
               }`
           )
           .join('<br>')

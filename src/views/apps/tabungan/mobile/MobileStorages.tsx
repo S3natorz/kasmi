@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 // MUI Imports
 import Box from '@mui/material/Box'
@@ -10,11 +10,20 @@ import ButtonBase from '@mui/material/ButtonBase'
 import CircularProgress from '@mui/material/CircularProgress'
 import { useTheme } from '@mui/material/styles'
 
+// Third-party Imports
+import Swal from 'sweetalert2'
+
 // Component Imports
 import Swal from 'sweetalert2'
 
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
 import { SummaryCardSkeleton, StorageCardSkeleton } from './MobileSkeletons'
+
+// Hook Imports
+import { useTabunganData, invalidateMany } from '@/hooks/useTabunganData'
+
+// Contexts
+import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
 
 // Utils
 import { showSuccessToast, showErrorToast } from '@/utils/swal'
@@ -56,10 +65,17 @@ const MobileStorages = () => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const gradients = isDark ? darkGradients : lightGradients
+  const dict = useTabunganDictionary()
 
-  const [storages, setStorages] = useState<StorageTypeType[]>([])
-  const [goldPrice, setGoldPrice] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const { data: storagesData, isLoading: storagesLoading } = useTabunganData<StorageTypeType[]>(
+    '/api/apps/tabungan/storage-types'
+  )
+
+  const { data: goldData } = useTabunganData<{ pricePerGram?: number }>('/api/apps/tabungan/gold-price')
+
+  const storages = Array.isArray(storagesData) ? storagesData : []
+  const goldPrice = goldData?.pricePerGram || 0
+  const loading = storagesLoading && storages.length === 0
 
   const [hideBalance, setHideBalance] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -75,12 +91,12 @@ const MobileStorages = () => {
 
   const handleRecalculate = async () => {
     const result = await Swal.fire({
-      title: 'Hitung Ulang Saldo?',
-      text: 'Saldo setiap dompet & simpanan akan dihitung ulang dari Saldo Awal + seluruh transaksi.',
+      title: dict.storageTypes.recalculateTitle,
+      text: dict.storageTypes.recalculateBody,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Ya, hitung ulang',
-      cancelButtonText: 'Batal',
+      confirmButtonText: dict.storageTypes.recalculateConfirm,
+      cancelButtonText: dict.storageTypes.recalculateCancel,
       customClass: { container: 'swal-container-top' }
     })
 
@@ -91,9 +107,9 @@ const MobileStorages = () => {
       const res = await fetch('/api/apps/tabungan/storage-types/recalculate', { method: 'POST' })
 
       if (!res.ok) {
-        showErrorToast('Gagal menghitung ulang saldo')
-        
-return
+        showErrorToast(dict.storageTypes.recalculateFail)
+
+        return
       }
 
       const data = await res.json()
@@ -103,43 +119,22 @@ return
       )
 
       if (changed.length === 0) {
-        showSuccessToast('Semua saldo sudah sesuai')
+        showSuccessToast(dict.storageTypes.recalculateNoChange)
       } else {
-        showSuccessToast(`${changed.length} dompet/simpanan diperbarui`)
+        showSuccessToast(dict.storageTypes.recalculateUpdated.replace('{count}', String(changed.length)))
       }
 
-      fetchData()
+      // Invalidate every cache key that derives from storage balances so
+      // all mounted SWR consumers (home, carousel, this page, dialogs)
+      // refetch immediately — doesn't wait for the websocket broadcast.
+      invalidateMany(['/api/apps/tabungan/storage-types', '/api/apps/tabungan/stats'])
     } catch (error) {
       console.error('Failed to recalculate:', error)
-      showErrorToast('Terjadi kesalahan saat menghitung ulang')
+      showErrorToast(dict.storageTypes.recalculateFail)
     } finally {
       setRecalculating(false)
     }
   }
-
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-
-      const [storageRes, goldRes] = await Promise.all([
-        fetch('/api/apps/tabungan/storage-types'),
-        fetch('/api/apps/tabungan/gold-price')
-      ])
-
-      const [s, g] = await Promise.all([storageRes.json(), goldRes.json()])
-
-      setStorages(Array.isArray(s) ? s : [])
-      setGoldPrice(g.pricePerGram || 0)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   const mask = (v: string) => (hideBalance ? '••••••' : v)
 
@@ -177,14 +172,14 @@ return
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
           <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-            Total Saldo Keseluruhan
+            {dict.storageTypes.title}
           </Typography>
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <ButtonBase
               onClick={handleRecalculate}
               disabled={recalculating}
               sx={{ borderRadius: 1, p: 0.5, opacity: recalculating ? 0.5 : 1 }}
-              title='Hitung Ulang Saldo'
+              title={dict.storageTypes.recalculate}
             >
               {recalculating ? (
                 <CircularProgress size={16} />
@@ -201,7 +196,7 @@ return
           {mask(formatCurrency(totalBalance))}
         </Typography>
         <Typography variant='caption' sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-          {storages.length} akun aktif
+          {storages.length} {dict.byType.count}
         </Typography>
       </Box>
 
@@ -275,7 +270,7 @@ return
                 </Box>
 
                 <Typography variant='caption' sx={{ fontSize: '0.72rem', opacity: 0.9, color: '#fff', display: 'block' }}>
-                  {storage.isGold ? `${storage.goldWeight?.toFixed(2) || 0} gram • Saldo` : 'Saldo'}
+                  {storage.isGold ? `${storage.goldWeight?.toFixed(2) || 0} ${dict.storageCarousel.grams} • ${dict.storageCarousel.balance}` : dict.storageCarousel.balance}
                 </Typography>
                 <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', color: '#fff' }}>
                   {mask(formatCurrency(balance))}
@@ -289,7 +284,7 @@ return
       {storages.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
           <i className='tabler-wallet-off' style={{ fontSize: 64, opacity: 0.3 }} />
-          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>Belum ada dompet</Typography>
+          <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>{dict.storageTypes.empty}</Typography>
         </Box>
       )}
 

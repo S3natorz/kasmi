@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
@@ -14,8 +14,13 @@
     "migrate": "dotenv -e .env -- npx prisma migrate dev",
     "postinstall": "prisma generate && npm run build:icons",
     "removeI18n": "tsx src/remove-translation-scripts/index.ts",
-    "clean": "rm -rf .next",
-    "clear": "rm -rf node_modules .next"
+    "clean": "rm -rf .next .open-next",
+    "clear": "rm -rf node_modules .next .open-next",
+    "cf:build": "npm run build:icons && opennextjs-cloudflare build",
+    "cf:preview": "npm run build:icons && opennextjs-cloudflare build && wrangler dev",
+    "cf:deploy": "npm run build:icons && opennextjs-cloudflare build && wrangler deploy",
+    "cf:deploy:realtime": "wrangler deploy --config workers/realtime/wrangler.toml",
+    "cf:types": "wrangler types cloudflare-env.d.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "2.11.1",
@@ -26,6 +31,7 @@
     "@emotion/styled": "11.14.1",
     "@floating-ui/dom": "1.7.4",
     "@floating-ui/react": "0.27.16",
+    "@fontsource/public-sans": "^5.2.7",
     "@formatjs/intl-localematcher": "0.6.2",
     "@formkit/drag-and-drop": "0.5.3",
     "@fullcalendar/common": "5.11.5",
@@ -39,6 +45,8 @@
     "@mui/lab": "7.0.1-beta.19",
     "@mui/material": "7.3.5",
     "@mui/material-nextjs": "7.3.5",
+    "@opennextjs/cloudflare": "^1.19.1",
+    "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "6.19.0",
     "@reduxjs/toolkit": "2.10.1",
     "@tanstack/match-sorter-utils": "8.19.4",
@@ -68,6 +76,7 @@
     "next": "16.1.6",
     "next-auth": "4.24.13",
     "next-pwa": "^5.6.0",
+    "pg": "^8.20.0",
     "react": "19.2.0",
     "react-apexcharts": "1.4.1",
     "react-colorful": "5.6.1",
@@ -87,6 +96,7 @@
     "valibot": "1.1.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260412.1",
     "@iconify/json": "2.2.408",
     "@iconify/tools": "4.1.4",
     "@iconify/types": "2.0.0",
@@ -96,6 +106,7 @@
     "@types/mapbox-gl": "3.4.1",
     "@types/negotiator": "0.6.4",
     "@types/node": "24.10.1",
+    "@types/pg": "^8.20.0",
     "@types/react": "19.2.6",
     "@types/react-dom": "19.2.3",
     "@typescript-eslint/eslint-plugin": "8.46.2",
@@ -121,7 +132,8 @@
     "tailwindcss": "4.1.17",
     "tailwindcss-logical": "4.1.0",
     "tsx": "4.20.6",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "wrangler": "^4.81.1"
   },
   "resolutions": {
     "rimraf": "5.0.7",
