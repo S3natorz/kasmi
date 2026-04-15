@@ -17,6 +17,7 @@
     "clean": "rm -rf .next .open-next",
     "clear": "rm -rf node_modules .next .open-next",
     "cf:build": "npm run build:icons && opennextjs-cloudflare build",
+    "cf:build:ci": "prisma migrate deploy && npm run build:icons && opennextjs-cloudflare build",
     "cf:preview": "npm run build:icons && opennextjs-cloudflare build && wrangler dev",
     "cf:deploy": "npm run build:icons && opennextjs-cloudflare build && wrangler deploy",
     "cf:deploy:realtime": "wrangler deploy --config workers/realtime/wrangler.toml",
