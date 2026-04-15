@@ -13,7 +13,6 @@ import Box from '@mui/material/Box'
 // Component Imports
 import MobileShell from './MobileShell'
 import TopBar from './TopBar'
-import TabunganRealtime from '@/libs/realtime/TabunganRealtime'
 
 // Context Imports
 import { useTabunganDictionary } from '@/contexts/TabunganDictionaryContext'
@@ -71,7 +70,6 @@ const TabunganMobileLayout = ({ children }: Props) => {
 
   return (
     <MobileShell>
-      <TabunganRealtime />
       {!isDashboard && meta && (
         <TopBar
           title={meta.title}

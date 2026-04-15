@@ -25,6 +25,13 @@ import { showSuccessToast, showErrorToast } from '@/utils/swal'
 import { fuzzyMatchName } from '@/utils/voiceTransactionParser'
 import type { ParsedTransaction } from '@/utils/voiceTransactionParser'
 import { wibToday } from '@/libs/wib'
+import { invalidateMany } from '@/hooks/useTabunganData'
+
+const MUTATION_INVALIDATION_KEYS = [
+  '/api/apps/tabungan/transactions',
+  '/api/apps/tabungan/stats',
+  '/api/apps/tabungan/storage-types'
+]
 
 // Types
 import type {
@@ -160,6 +167,7 @@ const AddTransactionDialog = ({ open, onClose, onSuccess, initialVoiceData }: Pr
 
       if (response.ok) {
         showSuccessToast(dict.dialogs.addSuccess)
+        invalidateMany(MUTATION_INVALIDATION_KEYS)
         onClose()
         onSuccess?.()
       } else {

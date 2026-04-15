@@ -27,6 +27,16 @@ import { showSuccessToast, showErrorToast, showDeleteConfirm } from '@/utils/swa
 import { fuzzyMatchName } from '@/utils/voiceTransactionParser'
 import type { ParsedTransaction } from '@/utils/voiceTransactionParser'
 import { wibDateKey, wibToday } from '@/libs/wib'
+import { invalidateMany } from '@/hooks/useTabunganData'
+
+// Every cache key that derives from transactions or storage balances.
+// Invalidated after any PUT/DELETE so the UI refetches without
+// relying on realtime WebSocket events.
+const MUTATION_INVALIDATION_KEYS = [
+  '/api/apps/tabungan/transactions',
+  '/api/apps/tabungan/stats',
+  '/api/apps/tabungan/storage-types'
+]
 
 // Types
 import type {
@@ -141,6 +151,12 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
 
       if (response.ok) {
         showSuccessToast(dict.dialogs.updateSuccess)
+
+        // Bust every cache that depends on transactions / balances so
+        // mounted SWR consumers (Home, Carousel, Transactions list,
+        // Storage dialogs) revalidate immediately — not dependent on
+        // realtime WebSocket invalidation.
+        invalidateMany(MUTATION_INVALIDATION_KEYS)
         onClose()
         onSuccess?.()
       } else {
@@ -167,6 +183,7 @@ const EditTransactionDialog = ({ open, onClose, onSuccess, transaction }: Props)
 
         if (response.ok) {
           showSuccessToast(dict.dialogs.deleteSuccess)
+          invalidateMany(MUTATION_INVALIDATION_KEYS)
           onClose()
           onSuccess?.()
         } else {
