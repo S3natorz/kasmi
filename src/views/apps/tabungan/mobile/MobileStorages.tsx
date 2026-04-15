@@ -14,8 +14,6 @@ import { useTheme } from '@mui/material/styles'
 import Swal from 'sweetalert2'
 
 // Component Imports
-import Swal from 'sweetalert2'
-
 import StorageTransactionsDialog from '@/components/dialogs/StorageTransactionsDialog'
 import { SummaryCardSkeleton, StorageCardSkeleton } from './MobileSkeletons'
 
