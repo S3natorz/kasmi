@@ -1,12 +1,12 @@
 // Schema untuk Supabase Postgres (diakses via pg + @prisma/adapter-pg
 // di Cloudflare Workers). Gunakan URL Supavisor Session mode (port 5432)
-// untuk `DATABASE_URL`; Transaction mode (port 6543) akan memecah
-// `prisma.$transaction([...])` di route restore.
+// untuk `DATABASE_URL` — Session mode mendukung DDL (prisma migrate
+// deploy) dan `prisma.$transaction([...])` di route restore.
+// Transaction mode (port 6543) akan memecah batch transaksi multi-statement.
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Opsional: koneksi direct Supabase untuk migration
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
