@@ -18,7 +18,40 @@ const pwaConfig = withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development'
+  disable: process.env.NODE_ENV === 'development',
+
+  // next-pwa's default runtimeCaching includes a NetworkFirst rule for
+  // `/api/*` responses. In theory that should always prefer network;
+  // in practice the SW cache survives "close app + reopen", so any
+  // transient network blip (or Cloudflare edge HIT race) gets pinned
+  // for 24h and the user sees stale data after an edit even though the
+  // server persisted the change. Override runtimeCaching so API routes
+  // are NEVER cached by the service worker — Cloudflare's edge cache
+  // already handles first-paint speed, and our SWR hook already handles
+  // revalidation. The service worker should only cache static assets.
+  runtimeCaching: [
+    {
+      // Never cache API responses — go to network every time.
+      urlPattern: ({ url }: { url: URL }) => url.pathname.startsWith('/api/'),
+      handler: 'NetworkOnly'
+    },
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-image-assets',
+        expiration: { maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 }
+      }
+    },
+    {
+      urlPattern: /\.(?:js|css|woff2?|ttf)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-resources',
+        expiration: { maxEntries: 128, maxAgeSeconds: 7 * 24 * 60 * 60 }
+      }
+    }
+  ]
 })
 
 const nextConfig: NextConfig = {
