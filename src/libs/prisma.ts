@@ -19,19 +19,36 @@ import { PrismaClient } from '@/generated/prisma/client'
  * (no CF context, no binding).
  */
 const resolveConnectionString = (): string => {
-  try {
-    const ctx = getCloudflareContext() as { env?: { HYPERDRIVE?: { connectionString?: string } } } | undefined
-    const hyperdrive = ctx?.env?.HYPERDRIVE?.connectionString
+  // Hyperdrive's query caching (default ~60s TTL for SELECTs) was
+  // returning stale data after a write on one pool while the UI read
+  // via a different pool — edits appeared to "not save" even though
+  // the DB actually had the new value. Because we open a fresh
+  // pg.Pool per request (required on Workers), Hyperdrive's
+  // SQL-aware invalidation doesn't reliably tie our writes to our
+  // reads.
+  //
+  // Bypass Hyperdrive. Read/write both go through DATABASE_URL
+  // (Supavisor Session mode pooler). Connection setup is ~500ms
+  // slower per cold request but data is always fresh. If you want
+  // Hyperdrive back later, set ENABLE_HYPERDRIVE=true and restore
+  // the original fall-through.
+  const enableHyperdrive = process.env.ENABLE_HYPERDRIVE === 'true'
 
-    if (hyperdrive) return hyperdrive
-  } catch {
-    // No CF context — `next dev` / build time. Fall through to DATABASE_URL.
+  if (enableHyperdrive) {
+    try {
+      const ctx = getCloudflareContext() as { env?: { HYPERDRIVE?: { connectionString?: string } } } | undefined
+      const hyperdrive = ctx?.env?.HYPERDRIVE?.connectionString
+
+      if (hyperdrive) return hyperdrive
+    } catch {
+      // No CF context — fall through to DATABASE_URL.
+    }
   }
 
   const fromEnv = process.env.DATABASE_URL
 
   if (!fromEnv) {
-    throw new Error('DATABASE_URL is not set and no HYPERDRIVE binding is available')
+    throw new Error('DATABASE_URL is not set')
   }
 
   return fromEnv
